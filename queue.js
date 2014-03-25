@@ -8,6 +8,11 @@ var DEFAULTS = {
 	durable: true
 };
 
+var Exchange = require('./exchange');
+var badMessageExchange = new Exchange({
+	name: 'bad_message'
+});
+
 function _getConnection(){
 	var deferred = q.defer();
 	var connection = amqp.createConnection({ host: '127.0.0.1' });
@@ -28,17 +33,40 @@ function Queue(params){
 		theQueue.bind(exchange,'#');
 
 		theQueue.subscribe({ack:true}, function (message) {
-			var start = new Date();
-
+			var metadata = message.wabbittzzz;
 			var doneCalled = false;
+
+			delete message.wabbittzzz;
+
 			var done = function(error){
-				if (error){
-					global.logger.error(error);
-					theQueue.shift(true, true);
-				} else {
-					theQueue.shift();
-				}
 				doneCalled = true;
+
+				if (!error){
+					return theQueue.shift();
+				}
+
+				global.logger.error(error);
+				
+				if (metadata){
+					message.wabbittzzz = metadata;
+					metadata.attempts += 1;
+
+					if (metadata.attempts > 2){ 
+						// if this is the 3rd failure
+						// then remove the message from the queue
+						// and push to the bad message exchange.
+
+						theQueue.shift();
+						badMessageExchange.publish(message, {persistent:true});
+						return;
+					} 
+				}
+				else {
+					message.wabbittzzz = { attempts: 1 };
+				}
+				
+				// put the message back on the queue
+				theQueue.shift(true, true);
 			};
 
 			try {
