@@ -45,62 +45,40 @@ function Queue(params){
 		return d.promise;
 	}
 
-	function doBind(fn, theQueue){
-		theQueue.bind(exchangeName, '#');
-
-		theQueue.subscribe({ack:true}, function (message) {
-			var metadata = message.wabbittzzz;
-			var doneCalled = false;
-
-			delete message.wabbittzzz;
-
-			var done = function(error){
-				doneCalled = true;
-
-				if (!error){
-					return theQueue.shift();
-				}
-
-				global.logger.error(error);
-				
-				if (metadata){
-					message.wabbittzzz = metadata;
-					metadata.attempts += 1;
-
-					if (metadata.attempts > 2){ 
-						// if this is the 3rd failure
-						// then remove the message from the queue
-						// and push to the bad message exchange.
-
-						theQueue.shift();
-						badMessageExchange.publish(message, {persistent:true});
-						return;
-					} 
-				}
-				else {
-					message.wabbittzzz = { attempts: 1 };
-				}
-				
-				// put the message back on the queue
-				theQueue.shift(true, true);
-			};
-
-			try {
-				fn(message, done);
-			} catch (e){
-				if (!doneCalled){
-					done(e.toString());
-				}
-			}
-		}).addCallback(function(res){
-			ctag = res.consumerTag;
+	queuePromise
+		.then(function(queue){
+			queue.bind(exchangeName, '#');
 		});
-	}
 
 	var receieveFunc = function(fn){
 		queuePromise
 			.then(function(queue){
-				doBind(fn, queue);
+				queue.subscribe({ack:true}, function (message) {
+					var doneCalled = false;
+
+					var done = function(error){
+						doneCalled = true;
+
+						if (!error){
+							return queue.shift();
+						}
+
+						global.logger.error(error);
+						
+						// put the message back on the queue
+						queue.shift(true, true);
+					};
+
+					try {
+						fn(message, done);
+					} catch (e){
+						if (!doneCalled){
+							done(e.toString());
+						}
+					}
+				}).addCallback(function(res){
+					ctag = res.consumerTag;
+				});
 			});
 	};
 
@@ -112,6 +90,7 @@ function Queue(params){
 				queue.unsubscribe(ctag);
 			});
 	};
+
 	return receieveFunc;
 }
 
