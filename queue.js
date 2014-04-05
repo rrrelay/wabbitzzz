@@ -1,3 +1,5 @@
+var uuidModule = require('uuid');
+var uuid = uuidModule.v4.bind(uuidModule);
 var amqp = require('amqp'),
 	_ = require('lodash'),
 	q = require('q');
@@ -13,24 +15,38 @@ var badMessageExchange = new Exchange({
 	name: 'bad_message'
 });
 
-function _getConnection(){
-	var deferred = q.defer();
-	var connection = amqp.createConnection({ host: '127.0.0.1' });
-	connection.addListener('ready', deferred.resolve.bind(deferred, connection));
-
-	return deferred.promise;
-}
-
 function Queue(params){
 	params = _.extend(Object.create(null), DEFAULTS, params);
-	var name = params.name,
-		exchange = params.exchangeName;
+
+	var name = params.name || uuid(),
+		exchangeName = params.exchangeName,
+		ctag;
 
 	delete params.name;
 	delete params.exchangeName;
 
+	var queuePromise = _getConnection().then(_getQueue);
+
+	function _getConnection(){
+		var deferred = q.defer();
+		var connection = amqp.createConnection({ host: '127.0.0.1' });
+		connection.addListener('ready', deferred.resolve.bind(deferred, connection));
+
+		return deferred.promise;
+	}
+
+	function _getQueue(connection){
+		var d = q.defer();
+
+		connection.queue(name, params, function(queue){
+			d.resolve(queue);
+		});
+
+		return d.promise;
+	}
+
 	function doBind(fn, theQueue){
-		theQueue.bind(exchange,'#');
+		theQueue.bind(exchangeName, '#');
 
 		theQueue.subscribe({ack:true}, function (message) {
 			var metadata = message.wabbittzzz;
@@ -76,15 +92,27 @@ function Queue(params){
 					done(e.toString());
 				}
 			}
+		}).addCallback(function(res){
+			ctag = res.consumerTag;
 		});
 	}
 
-	return function(fn){
-		_getConnection()
-			.then(function(connection){
-				connection.queue(name, params, doBind.bind(null, fn));
+	var receieveFunc = function(fn){
+		queuePromise
+			.then(function(queue){
+				doBind(fn, queue);
 			});
 	};
+
+	receieveFunc.stop = function(){
+		queuePromise
+			.then(function(queue){
+				if (!ctag) return;
+
+				queue.unsubscribe(ctag);
+			});
+	};
+	return receieveFunc;
 }
 
 module.exports = Queue;
