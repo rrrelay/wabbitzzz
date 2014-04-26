@@ -29,7 +29,7 @@ function Queue(params){
 
 	function _getConnection(){
 		var deferred = q.defer();
-		var connection = amqp.createConnection({ host: '127.0.0.1' });
+		var connection = amqp.createConnection({ url: process.env.WABBITZZZ_URL || 'amqp://localhost' });
 		connection.addListener('ready', deferred.resolve.bind(deferred, connection));
 
 		return deferred.promise;
