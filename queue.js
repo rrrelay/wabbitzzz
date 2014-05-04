@@ -19,10 +19,12 @@ function Queue(params){
 	params = _.extend(Object.create(null), DEFAULTS, params);
 
 	var name = params.name || uuid(),
+		routingKey = params.key || '#',
 		exchangeName = params.exchangeName,
 		ctag;
 
 	delete params.name;
+	delete params.key;
 	delete params.exchangeName;
 
 	var queuePromise = _getConnection().then(_getQueue);
@@ -47,7 +49,7 @@ function Queue(params){
 
 	queuePromise
 		.then(function(queue){
-			queue.bind(exchangeName, '#');
+			queue.bind(exchangeName, routingKey);
 		});
 
 	var receieveFunc = function(fn){
