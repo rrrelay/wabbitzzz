@@ -19,7 +19,7 @@ function Queue(params){
 	params = _.extend(Object.create(null), DEFAULTS, params);
 
 	var name = params.name || uuid(),
-		routingKey = params.key || '#',
+		routingKey = (params.key || '#').toString(),
 		exchangeName = params.exchangeName,
 		ctag;
 

@@ -43,11 +43,11 @@ function Exchange(params){
 		exchangePromise
 			.then(function(exchange){
 				var options = _.extend({}, {persistent: true}, publishOptions);
-				var key = options.key;
+				var key = (options.key || 'blank').toString();
 
 				delete options.key;
 
-				exchange.publish(key || 'blank', msg, options);
+				exchange.publish(key, msg, options);
 			});
 	};
 }
