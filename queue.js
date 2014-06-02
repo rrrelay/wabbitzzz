@@ -49,6 +49,7 @@ function Queue(params){
 
 	queuePromise
 		.then(function(queue){
+			global.logger.debug('bindng to "'+exchangeName + '" with key "'+routingKey+'".');
 			queue.bind(exchangeName, routingKey);
 		});
 
