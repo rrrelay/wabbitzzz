@@ -10,20 +10,18 @@ var DEFAULTS = {
 	durable: true
 };
 
-var Exchange = require('./exchange');
-var badMessageExchange = new Exchange({
-	name: 'bad_message'
-});
 
 function Queue(params){
 	params = _.extend(Object.create(null), DEFAULTS, params);
 
-	var name = params.name || uuid(),
+	var name = params.name || ((params.namePrefix || '') + uuid()),
 		routingKey = (params.key || '#').toString(),
 		exchangeName = params.exchangeName,
 		ctag;
 
+	global.logger.debug('queue name: ' + name);
 	delete params.name;
+	delete params.namePrefix;
 	delete params.key;
 	delete params.exchangeName;
 
@@ -91,6 +89,15 @@ function Queue(params){
 				if (!ctag) return;
 
 				queue.unsubscribe(ctag);
+			});
+	};
+
+	receieveFunc.destroy = function(){
+		queuePromise
+			.then(function(queue){
+
+				global.logger.debug('destroying the queue.');
+				queue.destroy();
 			});
 	};
 
