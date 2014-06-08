@@ -19,7 +19,6 @@ function Queue(params){
 		exchangeName = params.exchangeName,
 		ctag;
 
-	global.logger.debug('queue name: ' + name);
 	delete params.name;
 	delete params.namePrefix;
 	delete params.key;
