@@ -1,6 +1,5 @@
-var uuidModule = require('uuid');
-var uuid = uuidModule.v4.bind(uuidModule);
-var amqp = require('amqp'),
+var uuid = require('ezuuid'),
+	amqp = require('amqp'),
 	_ = require('lodash'),
 	q = require('q');
 
@@ -11,18 +10,20 @@ var DEFAULTS = {
 };
 
 
+
 function Queue(params){
 	params = _.extend(Object.create(null), DEFAULTS, params);
 
 	var name = params.name || ((params.namePrefix || '') + uuid()),
 		routingKey = (params.key || '#').toString(),
-		exchangeName = params.exchangeName,
 		ctag;
 
-	delete params.name;
-	delete params.namePrefix;
-	delete params.key;
-	delete params.exchangeName;
+	var exchangeNames = _.chain([params.exchangeNames])
+		.union([params.exchangeName])
+		.flatten()
+		.uniq()
+		.filter(Boolean)
+		.value();
 
 	var queuePromise = _getConnection().then(_getQueue);
 
@@ -46,9 +47,10 @@ function Queue(params){
 
 	queuePromise
 		.then(function(queue){
-			global.logger.debug('bindng to "'+exchangeName + '" with key "'+routingKey+'".');
-			queue.bind(exchangeName, routingKey);
-		});
+			exchangeNames.forEach(function(exchangeName){
+				queue.bind(exchangeName, routingKey);
+			});
+		}).done();
 
 	var receieveFunc = function(fn){
 		queuePromise
@@ -95,7 +97,6 @@ function Queue(params){
 		queuePromise
 			.then(function(queue){
 
-				global.logger.debug('destroying the queue.');
 				queue.destroy();
 			});
 	};
