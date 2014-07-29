@@ -1,6 +1,7 @@
 wabbitzzz
 =========
 
+
 Exchange
 ```js
 var Exchange = require('wabbitzzz').Exchange;
