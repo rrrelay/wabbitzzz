@@ -8,7 +8,7 @@ var Queue = require('./queue'),
 
 describe('queue', function(){
 	it('should be able to bind to a single exchange', function(done){
-		this.timeout = 5000;
+		this.timeout(5000);
 
 		var exchangeName = ezuuid();
 		var message = ezuuid();
@@ -35,7 +35,7 @@ describe('queue', function(){
 	});
 
 	it('should be able to bind to a single exchange with the exchangeNames property', function(done){
-		this.timeout = 5000;
+		this.timeout(5000);
 
 		var exchangeName = ezuuid();
 		var message = ezuuid();
@@ -62,7 +62,7 @@ describe('queue', function(){
 	});
 
 	it('should be able to bind to multiple exchanges', function(done){
-		this.timeout = 5000;
+		this.timeout(5000);
 
 		var exchangeName1 = ezuuid(),
 			exchangeName2 = ezuuid(),
@@ -104,7 +104,7 @@ describe('queue', function(){
 	});
 
 	it('should include the _exchange property', function(done){
-		this.timeout = 5000;
+		this.timeout(5000);
 
 		var exchangeName = ezuuid();
 		var message = ezuuid();
