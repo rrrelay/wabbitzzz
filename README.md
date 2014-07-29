@@ -1,4 +1,4 @@
-wabbitzzz
+wabbitzzz  [![Build Status](https://build.deliveryrelay.com/chevett/wabbitzzz/badge)](https://build.deliveryrelay.com/chevett/wabbitzzz)
 =========
 
 
