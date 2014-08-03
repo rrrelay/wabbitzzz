@@ -11,26 +11,31 @@ var EXCHANGE_DEFAULTS = {
 	reconnect: true
 };
 
+function _getConnection(){
+	var d = q.defer();
+
+	var connection = amqp.createConnection({ url:  process.env.WABBITZZZ_URL || 'amqp://localhost' });
+	connection.addListener('ready', d.resolve.bind(d, connection));
+	connection.addListener('error', d.reject.bind(d));
+
+	return d.promise;
+}
+
+var connectionPromise = _getConnection();
+
 function _getExchange(params){
 	var d = q.defer();
-	var connection = amqp.createConnection({ url: process.env.WABBITZZZ_URL || 'amqp://localhost' });
 
 	var name = params.name;
 	delete params.name;
 	params = _.extend({}, EXCHANGE_DEFAULTS, params);
 
-	connection.addListener('error', function(err){
-		if (global.logger){
-			global.logger.error(err);
-		} else {
-			console.error(err);
-		}
-	});
-
-	connection.addListener('ready', function(){
-		var exchange = connection.exchange(name, params);
-		d.fulfill(exchange);
-	});
+	connectionPromise
+		.then(function(connection){
+			var exchange = connection.exchange(name, params);
+			d.fulfill(exchange);
+		})
+		.done();
 
 	return d.promise;
 }

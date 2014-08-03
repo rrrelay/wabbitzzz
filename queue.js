@@ -9,7 +9,17 @@ var DEFAULTS = {
 	durable: true
 };
 
+function _getConnection(){
+	var d = q.defer();
 
+	var connection = amqp.createConnection({ url:  process.env.WABBITZZZ_URL || 'amqp://localhost' });
+	connection.addListener('ready', d.resolve.bind(d, connection));
+	connection.addListener('error', d.reject.bind(d));
+
+	return d.promise;
+}
+
+var connection = _getConnection();
 
 function Queue(params){
 	params = _.extend(Object.create(null), DEFAULTS, params);
@@ -25,32 +35,23 @@ function Queue(params){
 		.filter(Boolean)
 		.value();
 
-	var queuePromise = _getConnection().then(_getQueue);
-
-	function _getConnection(){
-		var deferred = q.defer();
-		var connection = amqp.createConnection({ url: process.env.WABBITZZZ_URL || 'amqp://localhost' });
-		connection.addListener('ready', deferred.resolve.bind(deferred, connection));
-
-		return deferred.promise;
-	}
+	var queuePromise = connection.then(_getQueue);
 
 	function _getQueue(connection){
 		var d = q.defer();
 
 		connection.queue(name, params, function(queue){
-			d.resolve(queue);
+			exchangeNames.forEach(function(exchangeName){
+				// only the last callback is called
+				queue.bind(exchangeName, routingKey, function(){
+					d.resolve(queue);
+				});
+			});
 		});
 
 		return d.promise;
 	}
 
-	queuePromise
-		.then(function(queue){
-			exchangeNames.forEach(function(exchangeName){
-				queue.bind(exchangeName, routingKey);
-			});
-		}).done();
 
 	var receieveFunc = function(fn){
 		queuePromise
@@ -81,23 +82,24 @@ function Queue(params){
 				}).addCallback(function(res){
 					ctag = res.consumerTag;
 				});
-			});
+			})
+			.done();
 	};
 
 	receieveFunc.stop = function(){
-		queuePromise
+		return queuePromise
 			.then(function(queue){
-				if (!ctag) return;
+				if (!ctag) return false;
 
-				queue.unsubscribe(ctag);
+				return queue.unsubscribe(ctag);
 			});
 	};
 
 	receieveFunc.destroy = function(){
-		queuePromise
+		return queuePromise
 			.then(function(queue){
 
-				queue.destroy();
+				return queue.destroy();
 			});
 	};
 
