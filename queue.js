@@ -44,6 +44,9 @@ function Queue(params){
 			exchangeNames.forEach(function(exchangeName){
 				// only the last callback is called
 				queue.bind(exchangeName, routingKey, function(){
+					if (_.isFunction(params.ready))
+						params.ready(queue);
+
 					d.resolve(queue);
 				});
 			});
