@@ -69,6 +69,19 @@ function Exchange(params){
 				exchange.publish(key, msg, options);
 			});
 	};
+
+	this.sendStopConsumer  = function(pid){
+		exchangePromise
+			.then(function(exchange){
+				var stopMsg = {
+					__stop: '_wabbitzzz_stop_please',
+					pid: pid,
+				};
+
+				exchange.publish('_', stopMsg, {persistent: false});
+			});
+	};
+
 }
 
 util.inherits(Exchange, EventEmitter);
