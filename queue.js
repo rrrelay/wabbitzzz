@@ -47,6 +47,7 @@ function Queue(params){
 					if (_.isFunction(params.ready))
 						params.ready(queue);
 
+					console.log('queue ready: '+ name);
 					d.resolve(queue);
 				});
 			});
@@ -60,6 +61,23 @@ function Queue(params){
 		queuePromise
 			.then(function(queue){
 				queue.subscribe({ack:true}, function (message) {
+
+					if (message.__stop === '_wabbitzzz_stop_please') {
+
+						if (message.pid == process.pid){
+							console.log('exit requested');
+							queue.shift();
+							process.exit();
+							return;
+						} else {
+							console.log('exit requested, but not for this process');
+							queue.shift();
+							console.dir(message);
+							
+							return;
+						}
+					}
+
 					var doneCalled = false;
 
 					var done = function(error){
