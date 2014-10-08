@@ -66,6 +66,8 @@ function Exchange(params){
 				delete options.key;
 
 				msg._exchange = msg._exchange || exchanageName;
+				msg._ticks = Date.now();
+
 				exchange.publish(key, msg, options);
 			});
 	};
