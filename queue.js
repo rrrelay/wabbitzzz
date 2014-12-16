@@ -22,7 +22,7 @@ function _getConnection(){
 var connection = _getConnection();
 
 function Queue(params){
-	params = _.extend(Object.create(null), DEFAULTS, params);
+	params = _.extend({}, DEFAULTS, params);
 
 	var name = params.name || ((params.namePrefix || '') + uuid()),
 		routingKey = (params.key || '#').toString(),
@@ -35,15 +35,24 @@ function Queue(params){
 		.filter(Boolean)
 		.value();
 
-	var queuePromise = connection.then(_getQueue);
+	var queuePromise = connection
+		.then(function(c){
+			return _getQueue(c);
+		})
+		.catch(function(err){ 
+			console.error(err);
+		});
 
 	function _getQueue(connection){
 		var d = q.defer();
 
-		connection.queue(name, params, function(queue){
+		//delete params.ready;
+		var readyFn = params.ready;
+		delete params.ready;
+		var myQ = connection.queue(name, params, function(queue){
 			function onBindComplete(){
-				if (_.isFunction(params.ready))
-					params.ready(queue);
+				if (_.isFunction(readyFn))
+					readyFn(queue);
 
 				d.resolve(queue);
 			}
@@ -57,6 +66,8 @@ function Queue(params){
 				});
 			}
 		});
+
+		myQ.on('error', d.reject.bind(d));
 
 		return d.promise;
 	}

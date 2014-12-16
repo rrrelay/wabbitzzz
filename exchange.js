@@ -31,7 +31,7 @@ function _getExchange(params){
 
 	connectionPromise
 		.then(function(connection){
-			var exchange = connection.exchange(name, params);
+			var exchange = name ? connection.exchange(name, params) : connection.exchange();
 			d.fulfill(exchange);
 		})
 		.done();
@@ -44,7 +44,7 @@ function Exchange(params){
 	EventEmitter.call(self);
 	params = _.extend({}, EXCHANGE_DEFAULTS, params);
 
-	var exchanageName = params.name;
+	var exchangeName = params.name;
 	var exchangePromise = _getExchange(params); 
 	var property = Object.defineProperty.bind(Object, self);
 
@@ -65,7 +65,7 @@ function Exchange(params){
 
 				delete options.key;
 
-				msg._exchange = msg._exchange || exchanageName;
+				msg._exchange = msg._exchange || exchangeName;
 				msg._ticks = Date.now();
 				
 				exchange.publish(key, msg, options, cb);
