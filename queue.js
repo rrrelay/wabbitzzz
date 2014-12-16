@@ -6,7 +6,7 @@ var uuid = require('ezuuid'),
 var DEFAULTS = {
 	exclusive: false,
 	autoDelete: false,
-	durable: true
+	durable: true,
 };
 
 function _getConnection(){
@@ -41,16 +41,21 @@ function Queue(params){
 		var d = q.defer();
 
 		connection.queue(name, params, function(queue){
-			exchangeNames.forEach(function(exchangeName){
-				// only the last callback is called
-				queue.bind(exchangeName, routingKey, function(){
-					if (_.isFunction(params.ready))
-						params.ready(queue);
+			function onBindComplete(){
+				if (_.isFunction(params.ready))
+					params.ready(queue);
 
-					console.log('queue ready: '+ name);
-					d.resolve(queue);
+				d.resolve(queue);
+			}
+
+			if (_.isEmpty(exchangeNames)){
+				queue.bind(routingKey, onBindComplete);
+			} else {
+				exchangeNames.forEach(function(exchangeName){
+					// only the last callback is called
+					queue.bind(exchangeName, routingKey, onBindComplete);
 				});
-			});
+			}
 		});
 
 		return d.promise;

@@ -28,7 +28,6 @@ function _getExchange(params){
 
 	var name = params.name;
 	delete params.name;
-	params = _.extend({}, EXCHANGE_DEFAULTS, params);
 
 	connectionPromise
 		.then(function(connection){
@@ -43,6 +42,7 @@ function _getExchange(params){
 function Exchange(params){
 	var self = this;
 	EventEmitter.call(self);
+	params = _.extend({}, EXCHANGE_DEFAULTS, params);
 
 	var exchanageName = params.name;
 	var exchangePromise = _getExchange(params); 
