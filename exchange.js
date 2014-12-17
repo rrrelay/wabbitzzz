@@ -1,6 +1,7 @@
 var q = require('q'),
 	util = require('util'),
 	amqp = require('amqp'),
+	Queue = require('./queue'),
 	_ = require('lodash'),
 	EventEmitter = require('events').EventEmitter;
 
@@ -9,6 +10,11 @@ var EXCHANGE_DEFAULTS = {
 	autoDelete: false,
 	durable: true,
 	reconnect: true
+};
+
+var DELAYED_PUBLISH_DEFAULTS = {
+	delay: 3000,
+	key: '',
 };
 
 function _getConnection(){
@@ -70,6 +76,36 @@ function Exchange(params){
 				
 				exchange.publish(key, msg, options, cb);
 			});
+	};
+
+	this.delayedPublish = function(msg, publishOptions){
+		console.log('start delayedPublish: ' + exchangeName);
+		publishOptions = _.extend({}, DELAYED_PUBLISH_DEFAULTS, publishOptions);
+
+		var d = q.defer(),
+			queueName = 'delay_' + exchangeName  +'_by_'+publishOptions.delay+'__'+publishOptions.key;
+
+		new Queue({
+			name: queueName,
+			exclusive: false,
+			autoDelete: false,
+			arguments: {
+				'x-dead-letter-exchange': exchangeName,
+				'x-dead-letter-routing-key': publishOptions.key,
+				'x-message-ttl': publishOptions.delay,
+			},
+			ready: function(){
+				console.log('delayed queue built');
+				var defaultExchange = new Exchange();
+
+				defaultExchange.on('ready', function(){
+					defaultExchange.publish(msg, {key: queueName});
+				});
+			}
+		});
+
+
+		return d.promise;
 	};
 
 	this.sendStopConsumer  = function(pid){
