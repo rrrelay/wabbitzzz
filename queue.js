@@ -46,9 +46,9 @@ function Queue(params){
 	function _getQueue(connection){
 		var d = q.defer();
 
-		//delete params.ready;
 		var readyFn = params.ready;
 		delete params.ready;
+
 		var myQ = connection.queue(name, params, function(queue){
 			function onBindComplete(){
 				if (_.isFunction(readyFn))
