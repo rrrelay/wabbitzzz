@@ -79,7 +79,6 @@ function Exchange(params){
 	};
 
 	this.delayedPublish = function(msg, publishOptions){
-		console.log('start delayedPublish: ' + exchangeName);
 		publishOptions = _.extend({}, DELAYED_PUBLISH_DEFAULTS, publishOptions);
 
 		var d = q.defer(),
@@ -95,7 +94,6 @@ function Exchange(params){
 				'x-message-ttl': publishOptions.delay,
 			},
 			ready: function(){
-				console.log('delayed queue built');
 				var defaultExchange = new Exchange();
 
 				defaultExchange.on('ready', function(){
