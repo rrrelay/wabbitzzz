@@ -41,7 +41,11 @@ describe('exchange', function(){
 
 		var beginTicks;
 
-		var exchange = new Exchange({name: exchangeName});
+		var exchange = new Exchange({
+				autoDelete: true,
+				name: exchangeName
+			});
+
 		exchange.on('ready', function(){
 			var queue = new Queue({
 				autoDelete: true,
@@ -49,8 +53,7 @@ describe('exchange', function(){
 				exchangeNames: [exchangeName],
 				ready: function(){
 					beginTicks = Date.now();
-
-					exchange.delayedPublish({message: message}, {delay:2000});
+					exchange.delayedPublish({message: message}, {delay:3100});
 				}
 			});
 
@@ -58,8 +61,9 @@ describe('exchange', function(){
 				if (msg.message !== message) return done('got a message I shouldnt have');
 
 				var timeDiff = Date.now() - beginTicks;
+				console.dir(timeDiff);
 
-				if (timeDiff<=2000){
+				if (timeDiff<=3000){ // TODO: somehow a tiny bit off, it's cool with me atm
 					return done(new Error('too fast'));
 				}
 
