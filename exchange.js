@@ -37,8 +37,21 @@ function _getExchange(params){
 
 	connectionPromise
 		.then(function(connection){
-			var exchange = name ? connection.exchange(name, params) : connection.exchange();
-			d.fulfill(exchange);
+			var exchange;
+
+			if (name){
+				exchange = connection.exchange(name, params);
+			} else {
+				exchange = connection.exchange();
+			}
+
+			exchange.on('open', function(){
+				d.fulfill(exchange); 
+			});
+
+			exchange.on('error', function(err){
+				console.error(err);
+			});
 		})
 		.done();
 
@@ -57,7 +70,11 @@ function Exchange(params){
 	exchangePromise
 		.then(function(){
 			self.emit('ready');
-		}).done();
+		})
+		.catch(function(err){
+			global.logger.error('error creating exchange');
+			global.logger.error(err);
+		});
 
 	property('ready', {
 		get: function(){ return exchangePromise; }
@@ -94,10 +111,15 @@ function Exchange(params){
 				'x-message-ttl': publishOptions.delay,
 			},
 			ready: function(){
-				var defaultExchange = new Exchange();
+				var defaultExchange = new Exchange({confirm:true});
 
 				defaultExchange.on('ready', function(){
-					defaultExchange.publish(msg, {key: queueName});
+						console.log('ready');
+					setTimeout(function(){
+						defaultExchange.publish(msg, {key: queueName, confirm: true}, function(){
+							console.log('not hit - like ever');
+						});
+					}, 200);
 				});
 			}
 		});

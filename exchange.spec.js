@@ -73,4 +73,45 @@ describe('exchange', function(){
 		});
 
 	});
+
+	it('should be able to receive a publish confirm', function(done){
+		this.timeout(5000);
+
+		var message = ezuuid(),
+			exchangeName = ezuuid(),
+			exchange = new Exchange({
+				name: exchangeName, 
+				autoDelete: true,
+				confirm:true
+			});
+
+		var publishConfirmed = false;
+
+		exchange.on('ready', function(){
+			var queue = new Queue({
+				autoDelete: true,
+				exclusive: true,
+				exchangeNames: [exchangeName],
+				ready: function(){
+					exchange.publish({message: message}, {}, function(){
+							publishConfirmed = true;
+						});
+				}
+			});
+
+			queue(function(msg, ack){
+				setTimeout(function(){
+					if (msg.message !== message) return done('got a message I shouldnt have');
+
+					if (!publishConfirmed){
+						ack(new Error('not confirmed!'));
+					}
+
+					ack();
+					done();
+				}, 0);
+			});
+		});
+	});
+
 });

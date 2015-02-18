@@ -17,10 +17,14 @@ describe('queue', function(){
 
 		exchange1.on('ready', function(){
 
+			console.log('hello');
 			var queue = new Queue({
 				autoDelete: true,
 				exclusive: true,
-				exchangeName: exchangeName
+				exchangeName: exchangeName,
+				ready: function(){
+					exchange1.publish({key:message});
+				},
 			});
 
 			queue(function(msg, ack){
@@ -30,7 +34,6 @@ describe('queue', function(){
 				done();
 			});
 
-			exchange1.publish({key:message});
 		});
 	});
 
@@ -47,7 +50,10 @@ describe('queue', function(){
 			var queue = new Queue({
 				autoDelete: true,
 				exclusive: true,
-				exchangeNames: [exchangeName]
+				exchangeNames: [exchangeName],
+				ready: function(){
+					exchange1.publish({key:message});
+				},
 			});
 
 			queue(function(msg, ack){
@@ -57,7 +63,6 @@ describe('queue', function(){
 				done();
 			});
 
-			exchange1.publish({key:message});
 		});
 	});
 
@@ -116,7 +121,10 @@ describe('queue', function(){
 			var queue = new Queue({
 				autoDelete: true,
 				exclusive: true,
-				exchangeName: exchangeName
+				exchangeName: exchangeName,
+				ready: function(){
+					exchange1.publish({key:message});
+				},
 			});
 
 			queue(function(msg, ack){
@@ -128,7 +136,6 @@ describe('queue', function(){
 				done();
 			});
 
-			exchange1.publish({key:message});
 		});
 	});
 
