@@ -61,7 +61,6 @@ describe('exchange', function(){
 				if (msg.message !== message) return done('got a message I shouldnt have');
 
 				var timeDiff = Date.now() - beginTicks;
-				console.dir(timeDiff);
 
 				if (timeDiff<=3000){ // TODO: somehow a tiny bit off, it's cool with me atm
 					return done(new Error('too fast'));

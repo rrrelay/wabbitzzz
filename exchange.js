@@ -37,13 +37,7 @@ function _getExchange(params){
 
 	connectionPromise
 		.then(function(connection){
-			var exchange;
-
-			if (name){
-				exchange = connection.exchange(name, params);
-			} else {
-				exchange = connection.exchange();
-			}
+			var exchange = connection.exchange(name || '', params);
 
 			exchange.on('open', function(){
 				d.fulfill(exchange); 
@@ -114,10 +108,9 @@ function Exchange(params){
 				var defaultExchange = new Exchange({confirm:true});
 
 				defaultExchange.on('ready', function(){
-						console.log('ready');
 					setTimeout(function(){
-						defaultExchange.publish(msg, {key: queueName, confirm: true}, function(){
-							console.log('not hit - like ever');
+						defaultExchange.publish(msg, {key: queueName}, function(){
+							d.resolve();
 						});
 					}, 200);
 				});
