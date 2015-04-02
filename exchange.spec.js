@@ -108,7 +108,7 @@ describe('exchange', function(){
 
 					ack();
 					done();
-				}, 0);
+				}, 500);
 			});
 		});
 	});

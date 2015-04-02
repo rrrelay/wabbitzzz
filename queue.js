@@ -7,6 +7,7 @@ var DEFAULTS = {
 	exclusive: false,
 	autoDelete: false,
 	durable: true,
+	closeChannelOnUnsubscribe: true,
 };
 
 function _getConnection(){
@@ -103,7 +104,7 @@ function Queue(params){
 							return queue.shift();
 						}
 
-						global.logger.error(error);
+						console.error(error);
 						
 						// put the message back on the queue
 						queue.shift(true, true);
@@ -126,9 +127,7 @@ function Queue(params){
 	receieveFunc.stop = function(){
 		return queuePromise
 			.then(function(queue){
-				if (!ctag) return false;
-
-				return queue.unsubscribe(ctag);
+				queue.close();
 			});
 	};
 

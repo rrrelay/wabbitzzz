@@ -95,10 +95,11 @@ function Exchange(params){
 		var d = q.defer(),
 			queueName = 'delay_' + exchangeName  +'_by_'+publishOptions.delay+'__'+publishOptions.key;
 
-		new Queue({
+		var waitingRoom = new Queue({
 			name: queueName,
 			exclusive: false,
 			autoDelete: false,
+			closeChannelOnUnsubscribe: true,
 			arguments: {
 				'x-dead-letter-exchange': exchangeName,
 				'x-dead-letter-routing-key': publishOptions.key,
@@ -110,6 +111,8 @@ function Exchange(params){
 				defaultExchange.on('ready', function(){
 					setTimeout(function(){
 						defaultExchange.publish(msg, {key: queueName}, function(){
+							waitingRoom.stop();
+							defaultExchange.close();
 							d.resolve();
 						});
 					}, 200);
@@ -119,6 +122,13 @@ function Exchange(params){
 
 
 		return d.promise;
+	};
+
+	this.close  = function(){
+		return exchangePromise
+			.then(function(exchange){
+				return exchange.close();
+			});
 	};
 
 	this.sendStopConsumer  = function(pid){
