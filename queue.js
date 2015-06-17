@@ -35,6 +35,7 @@ function Queue(params){
 		.filter(Boolean)
 		.value();
 
+
 	var queuePromise = connection
 		.then(function(c){
 			return _getQueue(c);
@@ -42,6 +43,7 @@ function Queue(params){
 		.catch(function(err){ 
 			console.error(err);
 		});
+
 
 	function _getQueue(connection){
 		var d = q.defer();
@@ -139,6 +141,11 @@ function Queue(params){
 				return queue.destroy();
 			});
 	};
+
+	var property = Object.defineProperty.bind(Object, receieveFunc);
+	property('ready', {
+		get: function(){ return queuePromise; }
+	});
 
 	return receieveFunc;
 }
