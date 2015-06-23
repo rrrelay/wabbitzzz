@@ -2,8 +2,9 @@ var Exchange = require('./exchange'),
 	Queue = require('./queue'),
 	ezuuid = require('ezuuid');
 
+var ex = new Exchange();
+
 module.exports = function(methodName){
-	var ex = new Exchange();
 
 	return function(req, cb){
 		var key = ezuuid();
@@ -12,6 +13,8 @@ module.exports = function(methodName){
 		return ex.ready.then(function(){
 			var q = new Queue({
 				name: key,
+				autoDelete: true,
+				exclusive: true,
 				ready: function(){
 					ex.publish(req, {key: methodName});
 				},

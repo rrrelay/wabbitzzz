@@ -105,7 +105,7 @@ function Queue(params){
 							return queue.shift();
 						}
 
-						global.logger.error(error);
+						console.error(error);
 						
 						// put the message back on the queue
 						queue.shift(true, true);
