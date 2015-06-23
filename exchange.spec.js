@@ -99,6 +99,7 @@ describe('exchange', function(){
 			});
 
 			queue(function(msg, ack){
+				// give it a second.  sometimes the confirms come in after the message
 				setTimeout(function(){
 					if (msg.message !== message) return done('got a message I shouldnt have');
 
@@ -108,7 +109,7 @@ describe('exchange', function(){
 
 					ack();
 					done();
-				}, 0);
+				}, 1000);
 			});
 		});
 	});
