@@ -1,6 +1,7 @@
 var request = require('./request'),
 	q  = require('q'),
 	_  = require('lodash'),
+	Queue = require('./queue'),
 	response = require('./response'),
 	ezuuid = require('ezuuid'),
 	expect = require('chai').expect;
@@ -9,7 +10,7 @@ describe('queue', function(){
 	it('should be able to make rpc calls', function(done){
 		this.timeout(10000);
 
-		var METHOD_NAME = 'yeah666';
+		var METHOD_NAME = 'this_is_my_real_exchange';
 		var listenOnly = response(METHOD_NAME);
 		var listen = response(METHOD_NAME);
 		var key = ezuuid();
@@ -18,13 +19,29 @@ describe('queue', function(){
 
 		listenOnly(function(err, req, cb){
 			console.log('no one listens to me!: ' + req.msg);
-			cb(null, {msg:'just listening...'});
+			cb(null, { msg:'just listening...'});
 		});
 
 		listen(function(err, req, cb){
 			console.log('i gots the good responses');
-			cb(null, {msg:req.msg+ '_' + key});
+			cb(null, { isResponse: true, msg:req.msg+ '_' + key});
 		});
+
+		var interceptPromise = q.defer();
+
+		var intercept = new Queue({
+			exclusive: true,
+			autoDelete: true,
+			exchangeName: METHOD_NAME,
+		});
+
+		intercept(function(msg, ack){
+			console.log('|---------intercept------------|');
+			console.dir(msg);
+			console.log('|---------------------|');
+			ack();
+		});
+
 
 		setTimeout(function(){
 			_.chain(_.range(6))

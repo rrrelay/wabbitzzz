@@ -1,26 +1,28 @@
 var Exchange = require('./exchange'),
 	Queue = require('./queue'),
-	ezuuid = require('ezuuid'),
-	defaultExchange = new Exchange({type:'fanout'});
+	ezuuid = require('ezuuid');
 
+var exchanges = {};
 module.exports = function(methodName){
-	var key = ezuuid();
-	var q = new Queue({name: methodName+key, key: methodName, exchangeName: '_rpc_send'});
+	var key = ezuuid(),
+		exchange = exchanges[methodName] || new Exchange({type: 'topic', name: methodName}),
+		queue = new Queue({name: methodName+key, key: methodName, exchangeName: '_rpc_send'});
 
 	var listenOnly = false;
 
 	var fn = function(cb){
 
-		q.ready
+		queue.ready
 			.timeout(10000)
 			.then(function(){
-				q(function(msg, ack){
+				queue(function(msg, ack){
 					var done = function(err, res){
 						if (!listenOnly){
 							if (err){
-								defaultExchange.publish({_rpcError:true, _message: err.toString()}, {key:msg._rpcKey});
+								exchange.publish({_rpcError:true, _message: err.toString()}, {key:msg._rpcKey});
 							} else {
-								defaultExchange.publish(res, {key:msg._rpcKey});
+								exchange.publish(res, {key:msg._rpcKey});
+
 							}
 						}
 						ack();

@@ -7,14 +7,15 @@ var ex = new Exchange({type:'topic', name: '_rpc_send'});
 module.exports = function(methodName){
 
 	return function(req, cb){
-		var key = ezuuid();
-		req._rpcKey = key;
+		var key = req._rpcKey = ezuuid();
 
 		return ex.ready.then(function(){
 			var q = new Queue({
-				name: key,
 				autoDelete: true,
 				exclusive: true,
+				exchangeName: methodName,
+				key: key,
+				name: 'baloney' + key,
 				ready: function(){
 					ex.publish(req, {key: methodName});
 				},
