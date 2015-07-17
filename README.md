@@ -28,3 +28,20 @@ queue(function(msg, ack){
 	ack(); // pass something to ack for a failure
 });
 ```
+
+
+RPC Send
+```js
+var rpc = require('wabbitzzz').request('method-name');
+rpc(req, function(err, res){
+
+});
+```
+
+RPC Listen
+```js
+var rpc = require('wabbitzzz').response('method-name');
+rpc(function(err, req, cb){
+
+});
+```

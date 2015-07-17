@@ -2,7 +2,7 @@ var Exchange = require('./exchange'),
 	Queue = require('./queue'),
 	ezuuid = require('ezuuid');
 
-var ex = new Exchange();
+var ex = new Exchange({type:'topic', name: '_rpc_send'});
 
 module.exports = function(methodName){
 
@@ -21,7 +21,11 @@ module.exports = function(methodName){
 			});
 
 			q(function(msg, ack){
-				if (cb)cb(null, msg);
+				try {
+					if (cb)cb(null, msg);
+				} catch (e){
+					console.error(e);
+				}
 				ack();
 				q.destroy();
 			});
