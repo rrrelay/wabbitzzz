@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/.bin/mocha queue.spec.js exchange.spec.js",
+    "test": "./node_modules/.bin/mocha rpc.spec.js queue.spec.js exchange.spec.js",
     "testing": "./node_modules/.bin/nodemon ./node_modules/.bin/mocha queue.spec.js"
   },
   "author": "",
