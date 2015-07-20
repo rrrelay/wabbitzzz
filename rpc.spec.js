@@ -6,7 +6,7 @@ var request = require('./request'),
 	ezuuid = require('ezuuid'),
 	expect = require('chai').expect;
 
-describe('queue', function(){
+describe('rpc', function(){
 	it('should be able to make rpc calls', function(done){
 		this.timeout(10000);
 
@@ -26,8 +26,6 @@ describe('queue', function(){
 			console.log('i gots the good responses');
 			cb(null, { isResponse: true, msg:req.msg+ '_' + key});
 		});
-
-		var interceptPromise = q.defer();
 
 		var intercept = new Queue({
 			exclusive: true,
@@ -64,6 +62,39 @@ describe('queue', function(){
 				})
 				.catch(done);
 		}, 2000);
+	});
+
+	it('should handle timeouts', function(done){
+		this.timeout(4000);
+
+		var METHOD_NAME = 'this_is_my_timeout_Test';
+		var listen = response(METHOD_NAME);
+
+
+		listen(function(err, req, cb){
+			console.log('i just don\'t care');
+		});
+
+		var intercept = new Queue({
+			exclusive: true,
+			autoDelete: true,
+			durable: false,
+			exchangeName: METHOD_NAME,
+		});
+
+		intercept(function(msg, ack){
+			console.log('|---------intercept------------|');
+			console.dir(msg);
+			console.log('|---------------------|');
+			ack();
+		});
+
+
+		request(METHOD_NAME)({msg: 'goodbye cruel world'}, function(err, res){
+			console.error(err);
+			console.dir(res);
+			if (err) done();
+		});
 	});
 });
 

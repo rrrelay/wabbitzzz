@@ -3,9 +3,9 @@ var Exchange = require('./exchange'),
 	ezuuid = require('ezuuid'),
 	_ = require('lodash');
 
-var ex = new Exchange({type:'topic', name: '_rpc_send'});
+var ex = new Exchange({type:'direct', name: '_rpc_send'});
 
-var DEFAULTS = {timeout: 2000};
+var DEFAULTS = {timeout: 3000};
 module.exports = function(methodName, options){
 	switch (typeof methodName){
 		case 'string':
@@ -31,7 +31,7 @@ module.exports = function(methodName, options){
 				key: key,
 				name: 'get_response_' +methodName+'_'+ key,
 				ready: function(){
-					ex.publish(req, {key: methodName});
+					ex.publish(req, {key: methodName, persistent: false});
 				},
 			});
 
@@ -45,6 +45,7 @@ module.exports = function(methodName, options){
 				ack();
 				q.destroy();
 			});
+
 
 			var myTimeout = setTimeout(function(){
 				q.destroy();

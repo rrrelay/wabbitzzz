@@ -16,7 +16,10 @@ module.exports = function(methodName, options){
 	methodName = options.methodName;
 
 	var key = ezuuid(),
-		exchange = exchanges[methodName] || new Exchange({type: 'direct', name: methodName}),
+		exchange = exchanges[methodName] || new Exchange({
+			type: 'topic', 
+			name: methodName,
+		}),
 		queue = new Queue({
 			name: methodName+'__'+options.appName + '__'+key, 
 			exclusive: true,
@@ -37,9 +40,15 @@ module.exports = function(methodName, options){
 					var done = function(err, res){
 						if (!listenOnly){
 							if (err){
-								exchange.publish({_rpcError:true, _message: err.toString()}, {key:msg._rpcKey});
+								exchange.publish({
+									_rpcError:true, 
+									_message: err.toString(),
+								}, {
+									key:msg._rpcKey,
+									persistent: false, 
+								});
 							} else {
-								exchange.publish(res, {key:msg._rpcKey});
+								exchange.publish(res, {key:msg._rpcKey, persistent: false});
 							}
 						}
 						ack();
