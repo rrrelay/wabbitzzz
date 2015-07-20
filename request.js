@@ -1,10 +1,23 @@
 var Exchange = require('./exchange'),
 	Queue = require('./queue'),
-	ezuuid = require('ezuuid');
+	ezuuid = require('ezuuid'),
+	_ = require('lodash');
 
 var ex = new Exchange({type:'topic', name: '_rpc_send'});
 
-module.exports = function(methodName){
+var DEFAULTS = {timeout: 2000};
+module.exports = function(methodName, options){
+	switch (typeof methodName){
+		case 'string':
+			options = Object(options);
+			options.methodName = methodName;
+			break;
+		case 'object':
+			options = methodName;
+	}
+
+	methodName = options.methodName;
+	options = _.extend({}, DEFAULTS, options);
 
 	return function(req, cb){
 		var key = req._rpcKey = ezuuid();
@@ -13,15 +26,17 @@ module.exports = function(methodName){
 			var q = new Queue({
 				autoDelete: true,
 				exclusive: true,
+				durable: false,
 				exchangeName: methodName,
 				key: key,
-				name: 'baloney' + key,
+				name: 'get_response_' +methodName+'_'+ key,
 				ready: function(){
 					ex.publish(req, {key: methodName});
 				},
 			});
 
 			q(function(msg, ack){
+				clearTimeout(myTimeout);
 				try {
 					if (cb)cb(null, msg);
 				} catch (e){
@@ -30,6 +45,11 @@ module.exports = function(methodName){
 				ack();
 				q.destroy();
 			});
+
+			var myTimeout = setTimeout(function(){
+				q.destroy();
+				cb(new Error('timeout'));
+			}, options.timeout);
 			
 		});
 
