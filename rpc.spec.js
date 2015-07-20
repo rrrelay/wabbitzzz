@@ -96,5 +96,32 @@ describe('rpc', function(){
 			if (err) done();
 		});
 	});
+
+	it('should handle trees in the forest type of thing', function(done){
+		this.timeout(60000);
+
+		var METHOD_NAME = 'beaches_do_not_exist';
+
+		var intercept = new Queue({
+			exclusive: true,
+			autoDelete: true,
+			durable: false,
+			exchangeName: METHOD_NAME,
+		});
+
+		intercept(function(msg, ack){
+			console.log('|---------intercept------------|');
+			console.dir(msg);
+			console.log('|---------------------|');
+			ack();
+		});
+
+
+		request(METHOD_NAME, {timeout:20000})({msg: 'goodbye cruel world'}, function(err, res){
+			if (err) return done();
+			done(new Error('there was no error is the error'));
+
+		});
+	});
 });
 

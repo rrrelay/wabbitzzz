@@ -35,6 +35,11 @@ module.exports = function(methodName, options){
 				},
 			});
 
+			q.ready
+				.catch(function(err){
+					cb(err);
+				});
+
 			q(function(msg, ack){
 				clearTimeout(myTimeout);
 				try {

@@ -39,9 +39,6 @@ function Queue(params){
 	var queuePromise = connection
 		.then(function(c){
 			return _getQueue(c);
-		})
-		.catch(function(err){ 
-			console.error(err);
 		});
 
 
@@ -55,7 +52,7 @@ function Queue(params){
 			function onBindComplete(){
 				if (_.isFunction(readyFn))
 					readyFn(queue);
-
+			
 				d.resolve(queue);
 			}
 
@@ -122,7 +119,10 @@ function Queue(params){
 					ctag = res.consumerTag;
 				});
 			})
-			.done();
+			.catch(function(err){
+				console.log('there was a problem create queue: ' + name);
+				console.error(err);
+			});
 	};
 
 	receieveFunc.stop = function(){
