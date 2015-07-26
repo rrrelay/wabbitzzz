@@ -22,6 +22,7 @@ module.exports = function(methodName, options){
 		}),
 		queue = new Queue({
 			name: methodName+'__'+options.appName + '__'+key, 
+			ack: false,
 			exclusive: true,
 			autoDelete: true,
 			durable: false,
@@ -36,7 +37,7 @@ module.exports = function(methodName, options){
 		queue.ready
 			.timeout(10000)
 			.then(function(){
-				queue(function(msg, ack){
+				queue(function(msg){
 					var done = function(err, res){
 						if (!listenOnly){
 							if (err){
@@ -51,7 +52,6 @@ module.exports = function(methodName, options){
 								exchange.publish(res, {key:msg._rpcKey, persistent: false});
 							}
 						}
-						ack();
 					};
 
 					cb(null, msg, done);

@@ -23,7 +23,9 @@ module.exports = function(methodName, options){
 		var key = req._rpcKey = ezuuid();
 
 		return ex.ready.then(function(){
+
 			var q = new Queue({
+				ack: false,
 				autoDelete: true,
 				exclusive: true,
 				durable: false,
@@ -37,24 +39,27 @@ module.exports = function(methodName, options){
 
 			q.ready
 				.catch(function(err){
+					console.log('something happened');
 					cb(err);
 				});
 
-			q(function(msg, ack){
+
+
+			q(function(msg){
 				clearTimeout(myTimeout);
 				try {
 					if (cb)cb(null, msg);
 				} catch (e){
 					console.error(e);
 				}
-				ack();
-				q.destroy();
+
+				q.close();
 			});
 
 
 			var myTimeout = setTimeout(function(){
-				q.destroy();
 				cb(new Error('timeout'));
+				q.close();
 			}, options.timeout);
 			
 		});

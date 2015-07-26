@@ -8,9 +8,9 @@ var request = require('./request'),
 
 describe('rpc', function(){
 	it('should be able to make rpc calls', function(done){
-		this.timeout(10000);
+		this.timeout(1000);
 
-		var METHOD_NAME = 'this_is_my_real_exchange';
+		var METHOD_NAME = ezuuid();
 		var listenOnly = response(METHOD_NAME);
 		var listen = response(METHOD_NAME);
 		var key = ezuuid();
@@ -34,34 +34,32 @@ describe('rpc', function(){
 		});
 
 		intercept(function(msg, ack){
-			console.log('|---------intercept------------|');
-			console.dir(msg);
-			console.log('|---------------------|');
+			// console.log('|---------intercept------------|');
+			// console.dir(msg);
+			// console.log('|---------------------|');
 			ack();
 		});
 
 
-		setTimeout(function(){
-			_.chain(_.range(6))
-				.map(function(){return q.defer();})
-				.map(function(d, i){
-					request(METHOD_NAME)({msg: i}, function(err, res){
-						if (err) return d.reject(err);
+		_.chain(_.range(6))
+			.map(function(){return q.defer();})
+			.map(function(d, i){
+				request(METHOD_NAME)({msg: i}, function(err, res){
+					if (err) return d.reject(err);
 
-						var expected = i + '_'+key;
-						expect(res.msg).to.be.equal(expected);
-						console.log('i got back: ' + expected);
-						d.resolve();
-					});
-					return d.promise;
-				})
-				.thru(q.all)
-				.value()
-				.then(function(){
-					done();
-				})
-				.catch(done);
-		}, 2000);
+					var expected = i + '_'+key;
+					expect(res.msg).to.be.equal(expected);
+					console.log('i got back: ' + expected);
+					d.resolve();
+				});
+				return d.promise;
+			})
+			.thru(q.all)
+			.value()
+			.then(function(){
+				done();
+			})
+			.catch(done);
 	});
 
 	it('should handle timeouts', function(done){

@@ -7,6 +7,7 @@ var DEFAULTS = {
 	exclusive: false,
 	autoDelete: false,
 	durable: true,
+	ack: true,
 };
 
 function _getConnection(){
@@ -75,7 +76,10 @@ function Queue(params){
 	var receieveFunc = function(fn){
 		queuePromise
 			.then(function(queue){
-				queue.subscribe({ack:true}, function (message) {
+				var opt = {};
+				if (params.ack) opt.ack = true;
+
+				queue.subscribe(opt, function (message) {
 
 					if (message.__stop === '_wabbitzzz_stop_please') {
 
@@ -96,6 +100,7 @@ function Queue(params){
 					var doneCalled = false;
 
 					var done = function(error){
+						if (!opt.ack) return;
 						doneCalled = true;
 
 						if (!error){
@@ -131,6 +136,14 @@ function Queue(params){
 				if (!ctag) return false;
 
 				return queue.unsubscribe(ctag);
+			});
+	};
+
+	receieveFunc.close = function(){
+		return queuePromise
+			.then(function(queue){
+				queue.close();
+				console.dir('ok closed');
 			});
 	};
 
