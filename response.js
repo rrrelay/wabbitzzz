@@ -27,7 +27,7 @@ module.exports = function(methodName, options){
 			autoDelete: true,
 			durable: false,
 			key: methodName, 
-			exchangeName: '_rpc_send'
+			exchangeName: '_rpc_send_direct'
 		});
 
 	var listenOnly = false;

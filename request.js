@@ -3,7 +3,7 @@ var Exchange = require('./exchange'),
 	ezuuid = require('ezuuid'),
 	_ = require('lodash');
 
-var ex = new Exchange({type:'direct', name: '_rpc_send'});
+var ex = new Exchange({type:'direct', name: '_rpc_send_direct'});
 
 var DEFAULTS = {timeout: 3000};
 module.exports = function(methodName, options){
