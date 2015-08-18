@@ -54,7 +54,14 @@ module.exports = function(methodName, options){
 						}
 					};
 
-					cb(null, msg, done);
+					try {
+						cb(null, msg, done);
+					} catch (err){
+						console.log('unhandled error while processing ' + name);
+						console.error(err);
+						cb(err);
+
+					}
 				});
 			})
 			.catch(function(err){
