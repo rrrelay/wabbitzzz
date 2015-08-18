@@ -143,7 +143,6 @@ function Queue(params){
 		return queuePromise
 			.then(function(queue){
 				queue.close();
-				console.dir('ok closed');
 			});
 	};
 
