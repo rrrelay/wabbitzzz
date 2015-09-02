@@ -67,7 +67,11 @@ function Queue(params){
 			}
 		});
 
-		myQ.on('error', d.reject.bind(d));
+		myQ.on('error', function(err){
+			console.log('unable to bind to queue: '+ name);
+			console.error(err);
+			d.reject(err);
+		});
 
 		return d.promise;
 	}
