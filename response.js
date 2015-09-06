@@ -1,9 +1,13 @@
 var Exchange = require('./exchange'),
 	Queue = require('./queue'),
-	ezuuid = require('ezuuid');
+	ezuuid = require('ezuuid'),
+	_ = require('lodash');
 
+var DEFAULTS = {
+	appName: '',
+};
 var exchanges = {};
-module.exports = function(methodName, options){
+function _createOptions(methodName, options){
 	switch (typeof methodName){
 		case 'string':
 			options = Object(options);
@@ -13,20 +17,29 @@ module.exports = function(methodName, options){
 			options = methodName;
 	}
 
-	methodName = options.methodName;
+	options = _.extend({}, options, DEFAULTS);
 
-	var key = ezuuid(),
-		exchange = exchanges[methodName] || new Exchange({
+	if (options.appName && !/_$/.test(options.appName)) 
+		options.appName += '_';
+
+
+	return options;
+}
+
+module.exports = function(){
+	var options = _createOptions.apply(null, _.toArray(arguments)),
+		key = ezuuid(),
+		exchange = exchanges[options.methodName] || new Exchange({
 			type: 'topic', 
-			name: methodName,
+			name: options.methodName,
 		}),
 		queue = new Queue({
-			name: methodName+'__'+options.appName + '__'+key, 
+			name: options.appName + options.methodName + '_' + key,
 			ack: false,
 			exclusive: true,
 			autoDelete: true,
 			durable: false,
-			key: methodName, 
+			key: options.methodName, 
 			exchangeName: '_rpc_send_direct'
 		});
 
