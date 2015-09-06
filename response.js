@@ -17,7 +17,7 @@ function _createOptions(methodName, options){
 			options = methodName;
 	}
 
-	options = _.extend({}, options, DEFAULTS);
+	options = _.extend({}, DEFAULTS, options);
 
 	if (options.appName && !/_$/.test(options.appName)) 
 		options.appName += '_';
