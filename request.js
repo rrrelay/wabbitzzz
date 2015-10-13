@@ -48,7 +48,13 @@ module.exports = function(methodName, options){
 			q(function(msg){
 				clearTimeout(myTimeout);
 				try {
-					if (cb)cb(null, msg);
+					if (cb){
+						if (!msg._rpcError){
+							cb(msg);
+						} else{
+							cb(null, msg);
+						}
+					}
 				} catch (e){
 					console.error(e);
 				}
