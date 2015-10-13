@@ -49,7 +49,7 @@ module.exports = function(methodName, options){
 				clearTimeout(myTimeout);
 				try {
 					if (cb){
-						if (!msg._rpcError){
+						if (msg._rpcError){
 							cb(msg);
 						} else{
 							cb(null, msg);
