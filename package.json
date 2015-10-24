@@ -1,11 +1,11 @@
 {
   "name": "wabbitzzz",
-  "version": "1.0.7",
+  "version": "1.1.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/.bin/mocha rpc.spec.js queue.spec.js exchange.spec.js",
-    "testing": "./node_modules/.bin/nodemon ./node_modules/.bin/mocha queue.spec.js"
+    "test": "mocha rpc.spec.js queue.spec.js exchange.spec.js",
+    "testing": "nodemon mocha queue.spec.js"
   },
   "author": "",
   "license": "none",

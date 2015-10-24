@@ -121,5 +121,41 @@ describe('rpc', function(){
 
 		});
 	});
+	it('should expire messages properly', function(done){
+		this.timeout(10000);
+
+		var METHOD_NAME= 'this_is_my_ttl_test';
+		var listen = response({methodName: METHOD_NAME, ttl: 2000});
+
+		request({methodName: METHOD_NAME, timeout: 5000})({code: 'a'}, function(err, res){
+			if (err && /timeout/i.test(err.message)) return done();
+			done(err || new Error('there was a response'));
+		});
+
+		setTimeout(function(){
+			listen(function(err, req, cb){
+				cb(null, {message: 'hello'});
+			});
+		}, 3000);
+	});
+	it('should not expire delayed messages if within timeout', function(done){
+		this.timeout(10000);
+
+		var METHOD_NAME= 'this_is_my_other_ttl_test';
+		var listen = response({methodName: METHOD_NAME, ttl: 3000});
+
+		request({methodName: METHOD_NAME, timeout: 4000})({code: 'a'}, function(err, res){
+			if (err) return done(err);
+
+			if (res.message === 'hello2')
+				done();
+		});
+
+		setTimeout(function(){
+			listen(function(err, req, cb){
+				cb(null, {message: 'hello2'});
+			});
+		}, 2000);
+	});
 });
 

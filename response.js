@@ -5,6 +5,7 @@ var Exchange = require('./exchange'),
 
 var DEFAULTS = {
 	appName: '',
+	ttl: 10000,
 };
 var exchanges = {};
 function _createOptions(methodName, options){
@@ -40,7 +41,10 @@ module.exports = function(){
 			autoDelete: true,
 			durable: false,
 			key: options.methodName, 
-			exchangeName: '_rpc_send_direct'
+			exchangeName: '_rpc_send_direct',
+			arguments: {
+				'x-message-ttl': options.ttl,
+			},
 		});
 
 	var listenOnly = false;
