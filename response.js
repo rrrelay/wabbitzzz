@@ -30,17 +30,18 @@ function _createOptions(methodName, options){
 module.exports = function(){
 	var options = _createOptions.apply(null, _.toArray(arguments)),
 		key = ezuuid(),
-		exchange = exchanges[options.methodName] || new Exchange({
+		methodName = options.methodName,
+		exchange = exchanges[methodName] || new Exchange({
 			type: 'topic', 
-			name: options.methodName,
+			name: methodName,
 		}),
 		queue = new Queue({
-			name: options.appName + options.methodName + '_' + key,
+			name: options.appName + methodName + '_' + key,
 			ack: false,
 			exclusive: true,
 			autoDelete: true,
 			durable: false,
-			key: options.methodName, 
+			key: methodName,
 			exchangeName: '_rpc_send_direct',
 			arguments: {
 				'x-message-ttl': options.ttl,
@@ -74,10 +75,9 @@ module.exports = function(){
 					try {
 						cb(null, msg, done);
 					} catch (err){
-						console.log('unhandled error while processing ' + name);
+						console.log('unhandled error while processing ' + methodName);
 						console.error(err);
 						cb(err);
-
 					}
 				});
 			})
