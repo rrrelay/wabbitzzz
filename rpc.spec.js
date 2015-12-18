@@ -144,18 +144,23 @@ describe('rpc', function(){
 		var METHOD_NAME= 'this_is_my_other_ttl_test';
 		var listen = response({methodName: METHOD_NAME, ttl: 3000});
 
-		request({methodName: METHOD_NAME, timeout: 4000})({code: 'a'}, function(err, res){
-			if (err) return done(err);
+		listen
+			.ready
+			.then(function(){
+				request({methodName: METHOD_NAME, timeout: 4000})({code: 'a'}, function(err, res){
+					if (err) return done(err);
 
-			if (res.message === 'hello2')
-				done();
-		});
+					if (res.message === 'hello2')
+						done();
+				});
 
-		setTimeout(function(){
-			listen(function(err, req, cb){
-				cb(null, {message: 'hello2'});
+				setTimeout(function(){
+					listen(function(err, req, cb){
+						cb(null, {message: 'hello2'});
+					});
+				}, 2000);
 			});
-		}, 2000);
+
 	});
 
 	it('should be able to round robin requests if set as shared', function(done){
