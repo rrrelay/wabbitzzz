@@ -6,7 +6,9 @@ var Exchange = require('./exchange'),
 var DEFAULTS = {
 	appName: '',
 	ttl: 10000,
+	shared: false,
 };
+
 var exchanges = {};
 function _createOptions(methodName, options){
 	switch (typeof methodName){
@@ -35,10 +37,11 @@ module.exports = function(){
 			type: 'topic', 
 			name: methodName,
 		}),
+		queueName = options.appName + methodName + (options.shared ? '' : ('_' + key)),
 		queue = new Queue({
-			name: options.appName + methodName + '_' + key,
+			name: queueName,
 			ack: false,
-			exclusive: true,
+			exclusive: !options.shared,
 			autoDelete: true,
 			durable: false,
 			key: methodName,
@@ -82,6 +85,7 @@ module.exports = function(){
 				});
 			})
 			.catch(function(err){
+				console.error(err);
 				cb(err);
 			});
 
@@ -89,5 +93,7 @@ module.exports = function(){
 	};
 	fn.enable =function(){ listenOnly = false; };
 	fn.disable = function(){ listenOnly = true; };
+	fn.ready = queue.ready;
+
 	return fn;
 };

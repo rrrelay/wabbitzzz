@@ -157,5 +157,66 @@ describe('rpc', function(){
 			});
 		}, 2000);
 	});
+
+	it('should be able to round robin requests if set as shared', function(done){
+		this.timeout(10000);
+
+		var METHOD_NAME= ezuuid();
+		var listen1 = response({methodName: METHOD_NAME, ttl: 3000, shared: true});
+		var listen2 = response({methodName: METHOD_NAME, ttl: 3000, shared: true});
+		var listen3 = response({methodName: METHOD_NAME, ttl: 3000, shared: true});
+
+		q.all([listen1.ready,listen2.ready,listen3.ready])
+			.then(function(){
+				request({appName: 'shared_test_', methodName: METHOD_NAME, timeout: 4000})({code: 'a'}, function(err, res){
+					if (err) return done(err);
+				});
+
+				request({appName: 'shared_test_', methodName: METHOD_NAME, timeout: 4000})({code: 'b'}, function(err, res){
+					if (err) return done(err);
+				});
+
+				request({appName: 'shared_test_', methodName: METHOD_NAME, timeout: 4000})({code: 'c'}, function(err, res){
+					if (err) return done(err);
+				});
+			})
+			.catch(function(err){
+				done(err);
+			});
+
+
+		var heard1, heard2, heard3, isDone;
+		function allDone(){
+			if (isDone) return;
+
+			if (heard1 && heard2 && heard3) {
+				console.log('success');
+				isDone = true;
+				done();
+			}
+		}
+
+		listen1(function(err, req, cb){
+			console.log('listen1: ' + req.code);
+			if (heard1) return done(new Error('already heard1'));
+			heard1 = true;
+			cb(null, {message: 'hello1'});
+			allDone();
+		});
+		listen2(function(err, req, cb){
+			console.log('listen2: ' + req.code);
+			if (heard2) return done(new Error('already heard2'));
+			heard2 = true;
+			cb(null, {message: 'hello2'});
+			allDone();
+		});
+		listen3(function(err, req, cb){
+			console.log('listen3: ' + req.code);
+			if (heard3) return done(new Error('already heard3'));
+			heard3 = true;
+			cb(null, {message: 'hello3'});
+			allDone();
+		});
+	});
 });
 
