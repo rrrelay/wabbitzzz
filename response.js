@@ -10,7 +10,7 @@ var DEFAULTS = {
 };
 
 var exchanges = {};
-function _createOptions(methodName, options){
+function createOptions(methodName, options){
 	switch (typeof methodName){
 		case 'string':
 			options = Object(options);
@@ -30,7 +30,7 @@ function _createOptions(methodName, options){
 }
 
 module.exports = function(){
-	var options = _createOptions.apply(null, _.toArray(arguments)),
+	var options = createOptions.apply(null, _.toArray(arguments)),
 		key = ezuuid(),
 		methodName = options.methodName,
 		exchange = exchanges[methodName] || new Exchange({
@@ -62,7 +62,7 @@ module.exports = function(){
 					var done = function(err, res){
 						if (!listenOnly){
 							if (err){
-								exchange.publish({
+								return exchange.publish({
 									_rpcError:true, 
 									_message: err.toString(),
 								}, {
@@ -70,10 +70,11 @@ module.exports = function(){
 									persistent: false, 
 								});
 							} else {
-								exchange.publish(res, {key:msg._rpcKey, persistent: false});
+								return exchange.publish(res, {key:msg._rpcKey, persistent: false});
 							}
 						}
 					};
+					msg._listenOnly = listenOnly;
 
 					try {
 						cb(null, msg, done);
@@ -97,3 +98,4 @@ module.exports = function(){
 
 	return fn;
 };
+module.exports.createOptions = createOptions;

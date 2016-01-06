@@ -1,0 +1,71 @@
+var _ = require('lodash');
+var Queue = require('../queue');
+var request = require('../request');
+
+module.exports = function(){
+	var options = request.createOptions.apply(null, _.toArray(arguments));
+
+	var sendRequest = request(options);
+	var staleCache = {};
+
+	function _setCache(key, val){
+		staleCache[key] = val;
+
+		setTimeout(function(){
+			delete staleCache[key];
+		}, 10000);
+	}
+
+	return function(resourceKey, cb){
+		var staleQueue;
+		var staleVal = staleCache[resourceKey];
+
+		if (staleVal){
+			return setTimeout(function(){
+				console.log('WARNING: using cached stale value for '+options.methodName + ' ' + resourceKey);
+				var val = _.cloneDeep(staleVal);
+				cb(null, staleVal);
+			}, 0);
+		}
+
+		sendRequest({_resourceKey: resourceKey}, function(err, res){
+			if (err && /^timeout$/i.test(err.message)){
+				staleQueue = new Queue({
+					exchangeName: options.methodName + '__stale__',
+					key: resourceKey,
+					exclusive: true,
+					autoDelete: true,
+					durable: false,
+					ack: false,
+				});
+
+				var timeout = setTimeout(function(){
+					if (handled) return;
+					staleQueue.close();
+				}, 5000);
+
+				var handled = false;
+				staleQueue(function(msg){
+					if (handled) return;
+					handled = true;
+
+					console.log('WARNING: using stale value for '+options.methodName + ' ' + resourceKey);
+
+					clearTimeout(timeout);
+
+					_setCache(resourceKey, msg);
+
+					cb(null, msg);
+
+					setTimeout(function(){
+						staleQueue.close();
+					}, 0);
+
+				});
+			} else {
+				cb(err, res);
+			}
+		});
+	};
+};
+
