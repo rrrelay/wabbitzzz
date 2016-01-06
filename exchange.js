@@ -75,7 +75,7 @@ function Exchange(params){
 	});
 
 	this.publish = function(msg, publishOptions, cb){
-		exchangePromise
+		return exchangePromise
 			.then(function(exchange){
 				var options = _.extend({}, {persistent: true}, publishOptions);
 				var key = (options.key || 'blank').toString();
@@ -85,7 +85,7 @@ function Exchange(params){
 				msg._exchange = msg._exchange || exchangeName;
 				msg._ticks = Date.now();
 				
-				exchange.publish(key, msg, options, cb);
+				return exchange.publish(key, msg, options, cb);
 			});
 	};
 

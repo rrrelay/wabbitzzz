@@ -6,7 +6,7 @@ var Exchange = require('./exchange'),
 var ex = new Exchange({type:'direct', name: '_rpc_send_direct'});
 
 var DEFAULTS = {timeout: 3000};
-module.exports = function(methodName, options){
+function createOptions(methodName, options){
 	switch (typeof methodName){
 		case 'string':
 			options = Object(options);
@@ -18,6 +18,12 @@ module.exports = function(methodName, options){
 
 	methodName = options.methodName;
 	options = _.extend({}, DEFAULTS, options);
+	return options;
+}
+
+module.exports = function(){
+	var options = createOptions.apply(null, _.toArray(arguments));
+	var methodName = options.methodName;
 
 	return function(req, cb){
 		var key = req._rpcKey = ezuuid();
@@ -73,3 +79,4 @@ module.exports = function(methodName, options){
 	};
 
 };
+module.exports.createOptions = createOptions;
