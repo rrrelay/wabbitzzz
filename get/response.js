@@ -19,9 +19,9 @@ module.exports = function(){
 			var resourceKey = req._resourceKey;
 			if (req && req._listenOnly) return cb(err, resourceKey, sendResponse);
 
-			cb(err, resourceKey, function(err2, res){
-				if (err2) sendResponse(err2);
-				if (!res) sendResponse(err2, res);
+			cb(undefined, resourceKey, function(err2, res){
+				if (err2) return sendResponse(err2);
+				if (!res) return sendResponse(err2, res);
 
 				sendResponse(err2, res);
 				staleExchange.publish(res, {key:resourceKey});
