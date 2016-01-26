@@ -15,9 +15,9 @@ module.exports = function(){
 
 	var returnVal = function(cb){
 		responseHandler(function(err, req, sendResponse){
-			if (err) return cb(err);
+			if (err || !req) return cb(err);
 			var resourceKey = req._resourceKey;
-			if (req && req._listenOnly) return cb(err, resourceKey, sendResponse);
+			if (!resourceKey || req._listenOnly) return cb(err, resourceKey, sendResponse);
 
 			cb(undefined, resourceKey, function(err2, res){
 				if (err2) return sendResponse(err2);

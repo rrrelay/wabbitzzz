@@ -1,12 +1,11 @@
 var _ = require('lodash');
 var Queue = require('../queue');
 var request = require('../request');
+var staleCache = {};
 
 module.exports = function(){
 	var options = request.createOptions.apply(null, _.toArray(arguments));
-
 	var sendRequest = request(options);
-	var staleCache = {};
 
 	function _setCache(key, val){
 		staleCache[key] = val;
@@ -22,8 +21,8 @@ module.exports = function(){
 
 		if (staleVal){
 			return setTimeout(function(){
-				console.log('WARNING: using cached stale value for '+options.methodName + ' ' + resourceKey);
 				var val = _.cloneDeep(staleVal);
+				val._cached = true;
 				cb(null, staleVal);
 			}, 0);
 		}
@@ -49,10 +48,9 @@ module.exports = function(){
 					if (handled) return;
 					handled = true;
 
-					console.log('WARNING: using stale value for '+options.methodName + ' ' + resourceKey);
-
 					clearTimeout(timeout);
 
+					msg._stale = true;
 					_setCache(resourceKey, msg);
 
 					cb(null, msg);
