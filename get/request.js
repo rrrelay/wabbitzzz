@@ -28,7 +28,7 @@ module.exports = function(){
 		}
 
 		sendRequest({_resourceKey: resourceKey}, function(err, res){
-			if (err && /^timeout$/i.test(err.message)){
+			if (err){
 				staleQueue = new Queue({
 					exchangeName: options.methodName + '__stale__',
 					key: resourceKey,
