@@ -1,20 +1,22 @@
-var uuid = require('ezuuid'),
-	amqp = require('amqp'),
-	_ = require('lodash'),
-	q = require('q'),
-	getConnection = require('./get-connection');
+var uuid = require('ezuuid');
+var _ = require('lodash');
+var defaultExchangePublish = require('./default-exchange-publish');
+var q = require('q');
+var getConnection = require('./get-connection');
 
 var DEFAULTS = {
 	exclusive: false,
 	autoDelete: false,
 	durable: true,
 	ack: true,
+	useErrorQueue: false,
 };
 
 function Queue(params){
 	params = _.extend({}, DEFAULTS, params);
 
 	var name = params.name || ((params.namePrefix || '') + uuid()),
+		errorQueueName = name + '_error',
 		routingKey = (params.key || '#').toString(),
 		ctag;
 
@@ -24,6 +26,16 @@ function Queue(params){
 		.uniq()
 		.filter(Boolean)
 		.value();
+
+	if (params.useErrorQueue) {
+		var tmp = new Queue({ 
+			name: errorQueueName, 
+			durable: true,
+			ready: function(){
+				tmp.close();
+			},
+		});
+	}
 
 
 	var queuePromise = getConnection()
@@ -72,7 +84,10 @@ function Queue(params){
 				var opt = {};
 				if (params.ack) opt.ack = true;
 
-				queue.subscribe(opt, function (message) {
+				queue.subscribe(opt, function (message, headers, deliveryInfo) {
+					if (deliveryInfo) {
+						message._routingKey = message._routingKey || deliveryInfo.routingKey;
+					}
 
 					if (message.__stop === '_wabbitzzz_stop_please') {
 
@@ -100,10 +115,28 @@ function Queue(params){
 							return queue.shift();
 						}
 
-						console.error(error);
-						
-						// put the message back on the queue
-						queue.shift(true, true);
+						if (params.useErrorQueue) {
+							message._error = _.extend({}, {message: error.message, stack: error.stack}, error);
+							var options = { key: errorQueueName, persistent: true };
+							defaultExchangePublish(message, options)
+								.then(function(){
+									return queue.shift();
+								})
+								.catch(function(publishError){
+									console.error(error);
+									console.error(publishError);
+								});
+
+						} else {
+							console.log('HEY ...........................');
+							console.dir(error);
+							console.log('BYE ...........................');
+
+							// put the message back on the queue and shut it down
+							queue.shift(true, true);
+							queue.close();
+
+						}
 					};
 
 					try {
