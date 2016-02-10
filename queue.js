@@ -1,6 +1,7 @@
 var uuid = require('ezuuid'),
 	amqp = require('amqp'),
 	_ = require('lodash'),
+	defaultExchangePublish = require('./default-exchange-publish'),
 	q = require('q'),
 	getConnection = require('./get-connection');
 
@@ -9,12 +10,14 @@ var DEFAULTS = {
 	autoDelete: false,
 	durable: true,
 	ack: true,
+	useErrorQueue: false,
 };
 
 function Queue(params){
 	params = _.extend({}, DEFAULTS, params);
 
 	var name = params.name || ((params.namePrefix || '') + uuid()),
+		errorQueueName = 'error_' + name,
 		routingKey = (params.key || '#').toString(),
 		ctag;
 
@@ -24,6 +27,16 @@ function Queue(params){
 		.uniq()
 		.filter(Boolean)
 		.value();
+
+	if (params.useErrorQueue) {
+		var tmp = new Queue({ 
+			name: errorQueueName, 
+			durable: true,
+			ready: function(){
+				tmp.close();
+			},
+		});
+	}
 
 
 	var queuePromise = getConnection()
@@ -100,10 +113,23 @@ function Queue(params){
 							return queue.shift();
 						}
 
-						console.error(error);
-						
-						// put the message back on the queue
-						queue.shift(true, true);
+						if (params.useErrorQueue) {
+							message._error = error;
+							var options = { key: 'error_' + name, persistent: true };
+							defaultExchangePublish(message, options)
+								.then(function(){
+									return queue.shift();
+								})
+								.catch(function(publishError){
+									console.error(error);
+									console.error(publishError);
+								});
+
+						} else {
+							// put the message back on the queue and shut it down
+							queue.shift(true, true);
+							queue.close();
+						}
 					};
 
 					try {

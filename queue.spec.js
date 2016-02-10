@@ -17,7 +17,6 @@ describe('queue', function(){
 
 		exchange1.on('ready', function(){
 
-			console.log('hello');
 			var queue = new Queue({
 				autoDelete: true,
 				exclusive: true,
@@ -134,6 +133,59 @@ describe('queue', function(){
 
 				ack();
 				done();
+			});
+
+		});
+	});
+
+	it('should be able to push errors to error_xxx queue', function(done){
+		this.timeout(8000);
+
+		function _readError(){
+			var errorQueue = new Queue({
+				name: 'error_' + queueName,
+			});
+
+			errorQueue(function(msg, ack){
+				expect(msg._error).to.be.okay;
+				expect(msg._error.errorKey).to.be.equal(errorKey);
+				ack();
+
+				errorQueue.destroy();
+				done();
+			});
+
+		}
+
+		var exchangeName = ezuuid();
+		var queueName = ezuuid();
+		var message = ezuuid();
+		var errorKey = ezuuid();
+
+		var exchange1 = new Exchange({name: exchangeName, autoDelete: true});
+
+		exchange1.on('ready', function(){
+			var queue = new Queue({
+				name: queueName,
+				autoDelete: true,
+				exclusive: true,
+				useErrorQueue: true,
+				exchangeName: exchangeName,
+				ready: function(){
+					console.log('pooblishing');
+					exchange1.publish({key:message});
+				},
+			});
+
+			queue(function(msg, ack){
+				if (msg.key !== message) return done('got a message I shouldnt have');
+				if (msg._exchange !== exchangeName) return done('bad _exchangeName');
+
+				ack({ error: 'i messed up real bad!', errorKey: errorKey });
+
+				queue.destroy();
+
+				_readError();
 			});
 
 		});

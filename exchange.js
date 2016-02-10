@@ -4,6 +4,7 @@ var q = require('q'),
 	Queue = require('./queue'),
 	_ = require('lodash'),
 	EventEmitter = require('events').EventEmitter,
+	defaultExchangePublish = require('./default-exchange-publish'),
 	getConnection = require('./get-connection');
 
 var EXCHANGE_DEFAULTS = {
@@ -94,15 +95,13 @@ function Exchange(params){
 				'x-message-ttl': publishOptions.delay,
 			},
 			ready: function(){
-				var defaultExchange = new Exchange({confirm:true});
-
-				defaultExchange.on('ready', function(){
-					setTimeout(function(){
-						defaultExchange.publish(msg, {key: queueName}, function(){
-							d.resolve();
-						});
-					}, 200);
-				});
+				defaultExchangePublish(msg, { key: queueName })
+					.then(function() {
+						d.resolve();
+					})
+					.catch(function(err) {
+						d.reject(err);
+					});
 			}
 		});
 
