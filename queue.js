@@ -1,7 +1,8 @@
 var uuid = require('ezuuid'),
 	amqp = require('amqp'),
 	_ = require('lodash'),
-	q = require('q');
+	q = require('q'),
+	getConnection = require('./get-connection');
 
 var DEFAULTS = {
 	exclusive: false,
@@ -9,18 +10,6 @@ var DEFAULTS = {
 	durable: true,
 	ack: true,
 };
-
-function _getConnection(){
-	var d = q.defer();
-
-	var connection = amqp.createConnection({ url:  process.env.WABBITZZZ_URL || 'amqp://localhost' });
-	connection.addListener('ready', d.resolve.bind(d, connection));
-	connection.addListener('error', d.reject.bind(d));
-
-	return d.promise;
-}
-
-var connection = _getConnection();
 
 function Queue(params){
 	params = _.extend({}, DEFAULTS, params);
@@ -37,7 +26,7 @@ function Queue(params){
 		.value();
 
 
-	var queuePromise = connection
+	var queuePromise = getConnection()
 		.then(function(c){
 			return _getQueue(c);
 		});

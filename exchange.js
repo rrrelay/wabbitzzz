@@ -3,7 +3,8 @@ var q = require('q'),
 	amqp = require('amqp'),
 	Queue = require('./queue'),
 	_ = require('lodash'),
-	EventEmitter = require('events').EventEmitter;
+	EventEmitter = require('events').EventEmitter,
+	getConnection = require('./get-connection');
 
 var EXCHANGE_DEFAULTS = {
 	type: 'fanout',
@@ -17,25 +18,13 @@ var DELAYED_PUBLISH_DEFAULTS = {
 	key: '',
 };
 
-function _getConnection(){
-	var d = q.defer();
-
-	var connection = amqp.createConnection({ url:  process.env.WABBITZZZ_URL || 'amqp://localhost' });
-	connection.addListener('ready', d.resolve.bind(d, connection));
-	connection.addListener('error', d.reject.bind(d));
-
-	return d.promise;
-}
-
-var connectionPromise = _getConnection();
-
 function _getExchange(params){
 	var d = q.defer();
 
 	var name = params.name;
 	delete params.name;
 
-	connectionPromise
+	getConnection()
 		.then(function(connection){
 			var exchange = connection.exchange(name || '', params);
 
