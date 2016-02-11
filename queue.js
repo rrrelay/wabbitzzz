@@ -113,7 +113,7 @@ function Queue(params){
 						}
 
 						if (params.useErrorQueue) {
-							message._error = error;
+							message._error = _.extend({}, {message: error.message, stack: error.stack}, error);
 							var options = { key: errorQueueName, persistent: true };
 							defaultExchangePublish(message, options)
 								.then(function(){

@@ -148,7 +148,7 @@ describe('queue', function(){
 
 			errorQueue(function(msg, ack){
 				expect(msg._error).to.be.okay;
-				expect(msg._error.errorKey).to.be.equal(errorKey);
+				expect(msg._error.message).to.be.equal(errorKey);
 				ack();
 
 				errorQueue.destroy();
@@ -181,7 +181,7 @@ describe('queue', function(){
 				if (msg.key !== message) return done('got a message I shouldnt have');
 				if (msg._exchange !== exchangeName) return done('bad _exchangeName');
 
-				ack({ error: 'i messed up real bad!', errorKey: errorKey });
+				ack(new Error(errorKey));
 
 				queue.destroy();
 
