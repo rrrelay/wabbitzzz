@@ -138,12 +138,12 @@ describe('queue', function(){
 		});
 	});
 
-	it('should be able to push errors to error_xxx queue', function(done){
+	it('should be able to push errors to xxx_error queue', function(done){
 		this.timeout(8000);
 
 		function _readError(){
 			var errorQueue = new Queue({
-				name: 'error_' + queueName,
+				name: queueName +  '_error',
 			});
 
 			errorQueue(function(msg, ack){

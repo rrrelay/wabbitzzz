@@ -1,9 +1,8 @@
-var uuid = require('ezuuid'),
-	amqp = require('amqp'),
-	_ = require('lodash'),
-	defaultExchangePublish = require('./default-exchange-publish'),
-	q = require('q'),
-	getConnection = require('./get-connection');
+var uuid = require('ezuuid');
+var _ = require('lodash');
+var defaultExchangePublish = require('./default-exchange-publish');
+var q = require('q');
+var getConnection = require('./get-connection');
 
 var DEFAULTS = {
 	exclusive: false,
@@ -17,7 +16,7 @@ function Queue(params){
 	params = _.extend({}, DEFAULTS, params);
 
 	var name = params.name || ((params.namePrefix || '') + uuid()),
-		errorQueueName = 'error_' + name,
+		errorQueueName = name + '_error',
 		routingKey = (params.key || '#').toString(),
 		ctag;
 
@@ -115,7 +114,7 @@ function Queue(params){
 
 						if (params.useErrorQueue) {
 							message._error = error;
-							var options = { key: 'error_' + name, persistent: true };
+							var options = { key: errorQueueName, persistent: true };
 							defaultExchangePublish(message, options)
 								.then(function(){
 									return queue.shift();
