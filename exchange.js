@@ -82,6 +82,8 @@ function Exchange(params){
 	this.delayedPublish = function(msg, publishOptions){
 		publishOptions = _.extend({}, DELAYED_PUBLISH_DEFAULTS, publishOptions);
 
+		msg._exchange = msg._exchange || exchangeName;
+
 		var d = q.defer(),
 			queueName = 'delay_' + exchangeName  +'_by_'+publishOptions.delay+'__'+publishOptions.key;
 
