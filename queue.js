@@ -84,7 +84,10 @@ function Queue(params){
 				var opt = {};
 				if (params.ack) opt.ack = true;
 
-				queue.subscribe(opt, function (message) {
+				queue.subscribe(opt, function (message, headers, deliveryInfo) {
+					if (deliveryInfo) {
+						message._routingKey = message._routingKey || deliveryInfo.routingKey;
+					}
 
 					if (message.__stop === '_wabbitzzz_stop_please') {
 
