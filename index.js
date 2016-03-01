@@ -6,7 +6,7 @@ var response = require('./response');
 var getResponse = require('./get/response');
 var getRequest = require('./get/request');
 
-var bulkDequeue = require('./bulk-dequeue');
+//var bulkDequeue = require('./bulk-dequeue');
 
 module.exports = {
 	Exchange: Exchange,
@@ -17,5 +17,5 @@ module.exports = {
 		request: getRequest,
 		response: getResponse,
 	},
-	bulkDequeue: bulkDequeue,
+//	bulkDequeue: bulkDequeue,
 };
