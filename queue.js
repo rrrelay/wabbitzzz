@@ -3,6 +3,7 @@ var _ = require('lodash');
 var defaultExchangePublish = require('./default-exchange-publish');
 var q = require('q');
 var getConnection = require('./get-connection');
+var amqp = require('amqp');
 
 var DEFAULTS = {
 	exclusive: false,
@@ -11,6 +12,18 @@ var DEFAULTS = {
 	ack: true,
 	useErrorQueue: false,
 };
+
+function _getConnection(){
+	var d = q.defer();
+
+	var connection = amqp.createConnection({ url:  process.env.WABBITZZZ_URL || 'amqp://localhost' });
+	connection.addListener('ready', d.resolve.bind(d, connection));
+	connection.addListener('error', d.reject.bind(d));
+
+	return d.promise;
+}
+
+var connection = _getConnection();
 
 function Queue(params){
 	params = _.extend({}, DEFAULTS, params);
@@ -38,7 +51,7 @@ function Queue(params){
 	}
 
 
-	var queuePromise = getConnection()
+	var queuePromise = connection
 		.then(function(c){
 			return _getQueue(c);
 		});
