@@ -128,13 +128,14 @@ function Queue(params){
 								});
 
 						} else {
+							console.log('HEY ...........................');
+							console.dir(error);
+							console.log('BYE ...........................');
+
 							// put the message back on the queue and shut it down
 							queue.shift(true, true);
 							queue.close();
 
-							console.log('...........................');
-							console.dir(error);
-							console.log('...........................');
 						}
 					};
 
