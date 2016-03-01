@@ -131,6 +131,10 @@ function Queue(params){
 							// put the message back on the queue and shut it down
 							queue.shift(true, true);
 							queue.close();
+
+							console.log('...........................');
+							console.dir(error);
+							console.log('...........................');
 						}
 					};
 
