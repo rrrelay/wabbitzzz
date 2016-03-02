@@ -29,6 +29,8 @@ function createOptions(methodName, options){
 	return options;
 }
 
+var defaultExchange = new Exchange();
+
 module.exports = function(){
 	var options = createOptions.apply(null, _.toArray(arguments)),
 		key = ezuuid(),
@@ -60,17 +62,20 @@ module.exports = function(){
 			.then(function(){
 				queue(function(msg){
 					var done = function(err, res){
+						var publishOptions = {
+							key: msg._replyTo,
+							persistent: false,
+							correlationId: msg._correlationId,
+						};
 						if (!listenOnly){
 							if (err){
-								return exchange.publish({
+								return defaultExchange.publish({
 									_rpcError:true, 
 									_message: err.toString(),
-								}, {
-									key:msg._rpcKey,
-									persistent: false, 
-								});
+								}, publishOptions
+								);
 							} else {
-								return exchange.publish(res, {key:msg._rpcKey, persistent: false});
+								return defaultExchange.publish(res, publishOptions);
 							}
 						}
 					};
@@ -78,6 +83,7 @@ module.exports = function(){
 
 					try {
 						cb(null, msg, done);
+						exchange.publish(msg);
 					} catch (err){
 						console.log('unhandled error while processing ' + methodName);
 						console.error(err);

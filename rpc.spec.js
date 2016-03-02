@@ -7,24 +7,25 @@ var request = require('./request'),
 	expect = require('chai').expect;
 
 describe('rpc', function(){
-	it('should be able to make rpc calls', function(done){
-		this.timeout(4000);
+	it('should be able to make rpc calls mike', function(done){
+		this.timeout(400000);
 
 		var METHOD_NAME = ezuuid();
-		var listenOnly = response(METHOD_NAME);
 		var listen = response(METHOD_NAME);
 		var key = ezuuid();
 
-		listenOnly.disable();
+		var listenOnly = response(METHOD_NAME);
+		 listenOnly.disable();
 
-		listenOnly(function(err, req, cb){
-			console.log('no one listens to me!: ' + req.msg);
-			cb(null, { msg:'just listening...'});
-		});
+		 listenOnly(function(err, req, cb){
+		 	console.log('no one listens to me!: ' + req.msg);
+		 	cb(null, { msg:'just listening...'});
+		 });
 
 		listen(function(err, req, cb){
-			console.log('i gots the good responses');
-			cb(null, { isResponse: true, msg:req.msg+ '_' + key});
+			console.log('RPC server got message: ' + req.msg);
+			console.dir(req);
+			cb(null, { isResponse: true, msg: req.msg+ '_' + key});
 		});
 
 		var intercept = new Queue({

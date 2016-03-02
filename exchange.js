@@ -46,6 +46,7 @@ function _getExchange(params){
 			});
 
 			exchange.on('error', function(err){
+				console.log('exchange error!: ' + (name || ''));
 				console.error(err);
 			});
 		})
@@ -68,8 +69,8 @@ function Exchange(params){
 			self.emit('ready');
 		})
 		.catch(function(err){
-			global.logger.error('error creating exchange');
-			global.logger.error(err);
+			console.log('error creating exchange');
+			console.log(err);
 		});
 
 	property('ready', {
