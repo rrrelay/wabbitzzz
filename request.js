@@ -1,9 +1,48 @@
-var Exchange = require('./exchange'),
-	Queue = require('./queue'),
-	ezuuid = require('ezuuid'),
-	_ = require('lodash');
+var CONN_STRING = process.env.WABBITZZZ_URL || 'amqp://localhost';
+var amqplib = require('amqplib');
+var q = require('q');
+var ezuuid = require('ezuuid');
+var _ = require('lodash');
 
-var ex = new Exchange({type:'direct', name: '_rpc_send_direct'});
+var initChannel = q(amqplib.connect(CONN_STRING))
+	.then(function(conn) {
+		process.once('SIGINT', conn.close.bind(conn));
+		return conn.createChannel();
+	})
+	.then(function(chan){
+		var options = { noAck: true };
+		return chan.consume('amq.rabbitmq.reply-to',handleResponse, options)
+			.then(function(){
+				return chan.assertExchange('_rpc_send_direct', 'direct', { durable: true });
+			})
+			.then(function(){
+				return chan;
+			});
+	})
+	.catch(function(err){
+		console.log('error initializing channel');
+		console.error(err);
+	});
+
+function handleResponse(response){
+	if (!response || !response.properties || !response.properties.correlationId){
+		return console.dir('error, bad response.', response);
+	}
+
+	var correlationId = response.properties.correlationId;
+	var requestEntry = requestLookup[correlationId];
+
+	if (!requestEntry){
+		return console.dir('error, unknown correlationId.');
+	}
+
+	clearTimeout(requestEntry.timeout);
+
+	var msg = JSON.parse(response.content.toString());
+	delete requestLookup[correlationId];
+
+	requestEntry.cb(null, msg);
+}
 
 var DEFAULTS = {timeout: 3000};
 function createOptions(methodName, options){
@@ -21,61 +60,45 @@ function createOptions(methodName, options){
 	return options;
 }
 
+var requestLookup = {};
 module.exports = function(){
 	var options = createOptions.apply(null, _.toArray(arguments));
 	var methodName = options.methodName;
 
 	return function(req, cb){
-		var key = req._rpcKey = ezuuid();
+		var correlationId = ezuuid();
+		var requestEntry = requestLookup[correlationId] = {
+			cb: cb,
+		};
 
-		return ex.ready.then(function(){
-
-			var q = new Queue({
-				ack: false,
-				autoDelete: true,
-				exclusive: true,
-				durable: false,
-				exchangeName: methodName,
-				key: key,
-				name: 'get_response_' +methodName+'_'+ key,
-				ready: function(){
-					ex.publish(req, {key: methodName, persistent: false});
-				},
-			});
-
-			q.ready
-				.catch(function(err){
-					console.log('something happened');
-					cb(err);
-				});
-
-
-
-			q(function(msg){
-				clearTimeout(myTimeout);
-				try {
-					if (cb){
-						if (msg._rpcError){
-							cb(msg);
-						} else{
-							cb(null, msg);
-						}
-					}
-				} catch (e){
-					console.error(e);
+		return initChannel
+			.then(function(chan){
+				if (!chan){
+					console.error('unable to get initialized channel');
+					delete requestLookup[correlationId];
+					return cb(new Error('unable to initialize rpc channel'));
 				}
 
-				q.close();
+				var options = {
+					key: methodName,
+					correlationId: correlationId,
+					persistent: false,
+					replyTo: 'amq.rabbitmq.reply-to',
+					contentType: 'application/json',
+				};
+
+				return chan.publish('_rpc_send_direct', methodName, new Buffer(JSON.stringify(req)), options);
+			})
+			.then(function(){
+				requestEntry.timeout = setTimeout(function(){
+					delete requestLookup[correlationId];
+					cb(new Error('timeout'));
+				}, options.timeout);
+			})
+			.catch(function(err){
+				console.log('error sending request: ', methodName);
+				console.error(err);
 			});
-
-
-			var myTimeout = setTimeout(function(){
-				cb(new Error('timeout'));
-				q.close();
-			}, options.timeout);
-			
-		});
-
 	};
 
 };

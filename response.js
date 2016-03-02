@@ -29,6 +29,8 @@ function createOptions(methodName, options){
 	return options;
 }
 
+var defaultExchange = new Exchange();
+
 module.exports = function(){
 	var options = createOptions.apply(null, _.toArray(arguments)),
 		key = ezuuid(),
@@ -60,17 +62,23 @@ module.exports = function(){
 			.then(function(){
 				queue(function(msg){
 					var done = function(err, res){
+						var publishOptions = {
+							key: msg._replyTo,
+							persistent: false,
+							correlationId: msg._correlationId,
+						};
 						if (!listenOnly){
 							if (err){
-								return exchange.publish({
+								return defaultExchange.publish({
 									_rpcError:true, 
 									_message: err.toString(),
-								}, {
-									key:msg._rpcKey,
-									persistent: false, 
-								});
+								}, publishOptions
+								);
 							} else {
-								return exchange.publish(res, {key:msg._rpcKey, persistent: false});
+								// TODO: stop doing this and bump the major version
+								exchange.publish(msg);
+
+								return defaultExchange.publish(res, publishOptions);
 							}
 						}
 					};

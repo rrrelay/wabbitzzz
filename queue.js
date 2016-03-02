@@ -100,6 +100,8 @@ function Queue(params){
 				queue.subscribe(opt, function (message, headers, deliveryInfo) {
 					if (deliveryInfo) {
 						message._routingKey = message._routingKey || deliveryInfo.routingKey;
+						message._replyTo = deliveryInfo.replyTo;
+						message._correlationId = deliveryInfo.correlationId;
 					}
 
 					if (message.__stop === '_wabbitzzz_stop_please') {
