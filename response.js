@@ -76,7 +76,7 @@ module.exports = function(){
 								);
 							} else {
 								// TODO: stop doing this and bump the major version
-								exchange.publish(msg);
+								exchange.publish(res);
 
 								return defaultExchange.publish(res, publishOptions);
 							}
