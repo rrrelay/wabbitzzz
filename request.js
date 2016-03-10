@@ -41,7 +41,11 @@ function handleResponse(response){
 	var msg = JSON.parse(response.content.toString());
 	delete requestLookup[correlationId];
 
-	requestEntry.cb(null, msg);
+	if (msg && msg._rpcError) {
+		requestEntry.cb(new Error(msg.message || 'unknown error in rpc server'));
+	} else {
+		requestEntry.cb(null, msg);
+	}
 }
 
 var DEFAULTS = {timeout: 3000};

@@ -226,5 +226,29 @@ describe('rpc', function(){
 			allDone();
 		});
 	});
+
+	it('should return errors properly', function(done){
+		this.timeout(5000);
+
+		var METHOD_NAME= ezuuid();
+		var listen = response({methodName: METHOD_NAME, ttl: 3000, shared: true});
+
+		listen(function(err, req, cb){
+			cb(new Error('this is an error'));
+		});
+
+		listen.ready
+			.then(function(){
+				request({ methodName: METHOD_NAME, timeout: 4000})({code: 'a'}, function(err, res){
+					if (err) {
+						done();
+					}
+				});
+			})
+			.catch(function(err){
+				done(err);
+			});
+
+	});
 });
 
