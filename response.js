@@ -36,10 +36,10 @@ module.exports = function(){
 		key = ezuuid(),
 		methodName = options.methodName,
 		exchange = exchanges[methodName] || new Exchange({
-			type: 'topic', 
+			type: 'topic',
 			name: methodName,
 		}),
-		queueName = options.appName + methodName + (options.shared ? '' : ('_' + key)),
+		queueName = options.appName + methodName + (options.shared ? '' : ('_' + key)) + '_rpc', // trailing _rpc important for policy regex
 		queue = new Queue({
 			name: queueName,
 			ack: false,
