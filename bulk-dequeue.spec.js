@@ -1,5 +1,4 @@
 var bulkDequeue = require('./bulk-dequeue'),
-	q = require('q'),
 	_ = require('lodash'),
 	Exchange = require('./exchange'),
 	ezuuid = require('ezuuid'),

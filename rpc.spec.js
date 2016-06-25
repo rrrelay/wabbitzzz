@@ -1,5 +1,5 @@
 var request = require('./request'),
-	q  = require('q'),
+	Promise  = require('bluebird'),
 	_  = require('lodash'),
 	Queue = require('./queue'),
 	response = require('./response'),
@@ -23,7 +23,6 @@ describe('rpc', function(){
 		});
 
 		listen(function(err, req, cb){
-			console.log('i gots the good responses');
 			cb(null, { isResponse: true, msg:req.msg+ '_' + key});
 		});
 
@@ -34,35 +33,35 @@ describe('rpc', function(){
 		});
 
 		intercept(function(msg, ack){
-			// console.log('|---------intercept------------|');
-			// console.dir(msg);
-			// console.log('|---------------------|');
+			console.log('|---------intercept------------|');
+			console.dir(msg);
+			console.log('|---------------------|');
 			ack();
 		});
 
 		listen.ready
 			.then(function(){
 				return _.chain(_.range(6))
-					.map(function(){return q.defer();})
 					.map(function(d, i){
-						request(METHOD_NAME)({msg: i}, function(err, res){
-							if (err) return d.reject(err);
+						return new Promise(function(resolve, reject){
+							request(METHOD_NAME)({msg: i}, function(err, res){
+								console.log(err, res);
+								if (err) return reject(err);
 
-							var expected = i + '_'+key;
-							expect(res.msg).to.be.equal(expected);
-							console.log('i got back: ' + expected);
-							d.resolve();
+								var expected = i + '_'+key;
+								expect(res.msg).to.be.equal(expected);
+								console.log('i got back: ' + expected);
+								resolve();
+							});
 						});
-						return d.promise;
 					})
-					.thru(q.all)
+					.thru(Promise.all)
 					.value()
 					.then(function(){
 						done();
 					});
 			})
 			.catch(done);
-
 	});
 
 	it('should handle timeouts', function(done){
@@ -111,19 +110,16 @@ describe('rpc', function(){
 		});
 
 		intercept(function(msg, ack){
-			console.log('|---------intercept------------|');
-			console.dir(msg);
-			console.log('|---------------------|');
 			ack();
 		});
 
-
-		request(METHOD_NAME, {timeout:20000})({msg: 'goodbye cruel world'}, function(err, res){
+		request(METHOD_NAME, {timeout:2000})({msg: 'goodbye cruel world'}, function(err, res){
 			if (err) return done();
+		
 			done(new Error('there was no error is the error'));
-
 		});
 	});
+
 	it('should expire messages properly', function(done){
 		this.timeout(10000);
 
@@ -167,14 +163,21 @@ describe('rpc', function(){
 	});
 
 	it('should be able to round robin requests if set as shared', function(done){
-		this.timeout(10000);
+		this.timeout(40000);
 
 		var METHOD_NAME= ezuuid();
 		var listen1 = response({methodName: METHOD_NAME, ttl: 3000, shared: true});
 		var listen2 = response({methodName: METHOD_NAME, ttl: 3000, shared: true});
 		var listen3 = response({methodName: METHOD_NAME, ttl: 3000, shared: true});
 
-		q.all([listen1.ready,listen2.ready,listen3.ready])
+		Promise.all([listen1.ready,listen2.ready,listen3.ready])
+			.then(function(){
+				return new Promise(function(resolve){
+					setTimeout(function(){
+						resolve();
+					}, 1000);
+				});
+			})
 			.then(function(){
 				request({appName: 'shared_test_', methodName: METHOD_NAME, timeout: 4000})({code: 'a'}, function(err, res){
 					if (err) return done(err);

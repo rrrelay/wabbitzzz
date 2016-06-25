@@ -1,16 +1,14 @@
-var q = require('q');
-var amqp = require('amqp');
+var CONN_STRING = process.env.WABBITZZZ_URL || 'amqp://localhost';
+var amqplib = require('amqplib');
+var Promise = require('bluebird');
 
 function _getConnection(){
-	var d = q.defer();
-
-	var connection = amqp.createConnection({ url:  process.env.WABBITZZZ_URL || 'amqp://localhost' });
-	connection.addListener('ready', d.resolve.bind(d, connection));
-	connection.addListener('error', d.reject.bind(d));
-
-	return d.promise.timeout(20 * 1000);
-};
-
+	return Promise.resolve(amqplib.connect(CONN_STRING))
+		.then(function(conn) {
+			process.once('SIGINT', conn.close.bind(conn));
+			return conn;
+		});
+}
 
 var p;
 module.exports = function(){
@@ -19,4 +17,4 @@ module.exports = function(){
 	}
 
 	return p;
-}
+};

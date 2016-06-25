@@ -1,17 +1,22 @@
-var q = require('q'),
+var Promise = require('bluebird'),
 	util = require('util'),
-	amqp = require('amqp'),
+	getConnection = require('./get-connection'),
 	Queue = require('./queue'),
 	_ = require('lodash'),
 	EventEmitter = require('events').EventEmitter,
-	defaultExchangePublish = require('./default-exchange-publish'),
-	EventEmitter = require('events').EventEmitter;
+	defaultExchangePublish = require('./default-exchange-publish');
 
 var EXCHANGE_DEFAULTS = {
 	type: 'fanout',
 	autoDelete: false,
 	durable: true,
-	reconnect: true
+	reconnect: true,
+	name: '',
+};
+
+var PUBLISH_DEFAULTS = {
+	persistent: true,
+	contentType: 'application/json',
 };
 
 var DELAYED_PUBLISH_DEFAULTS = {
@@ -19,40 +24,29 @@ var DELAYED_PUBLISH_DEFAULTS = {
 	key: '',
 };
 
-function _getConnection(){
-	var d = q.defer();
+function _createChannel(params, confirmMode){
+	return getConnection()
+		.then(function(conn) {
+			if (confirmMode){
+				return conn.createConfirmChannel();
+			}
 
-	var connection = amqp.createConnection({ url:  process.env.WABBITZZZ_URL || 'amqp://localhost' });
-	connection.addListener('ready', d.resolve.bind(d, connection));
-	connection.addListener('error', d.reject.bind(d));
-
-	return d.promise;
-}
-
-var connectionPromise = _getConnection();
-
-function _getExchange(params){
-	var d = q.defer();
-
-	var name = params.name;
-	delete params.name;
-
-	connectionPromise
-		.then(function(connection){
-			var exchange = connection.exchange(name || '', params);
-
-			exchange.on('open', function(){
-				d.fulfill(exchange); 
-			});
-
-			exchange.on('error', function(err){
-				console.log('exchange error!: ' + (name || ''));
-				console.error(err);
-			});
+			return conn.createChannel();
 		})
-		.done();
+		.then(function(chan){
+			// if using the default exchange,
+			// then skip the assert
+			if (!params.name) return chan;
 
-	return d.promise;
+			const opt = _.cloneDeep(params);
+			delete opt.name;
+			delete opt.type;
+
+			return chan.assertExchange(params.name, params.type, opt)
+				.then(function(){
+					return chan;
+				});
+		});
 }
 
 function Exchange(params){
@@ -60,11 +54,14 @@ function Exchange(params){
 	EventEmitter.call(self);
 	params = _.extend({}, EXCHANGE_DEFAULTS, params);
 
-	var exchangeName = params.name;
-	var exchangePromise = _getExchange(params); 
+	var confirmMode = !!params.confirm;
+	delete params.confirm;
+
+	var exchangeName = params.name || '';
+	var getChannel = _createChannel(params, confirmMode);
 	var property = Object.defineProperty.bind(Object, self);
 
-	exchangePromise
+	getChannel
 		.then(function(){
 			self.emit('ready');
 		})
@@ -74,21 +71,30 @@ function Exchange(params){
 		});
 
 	property('ready', {
-		get: function(){ return exchangePromise; }
+		get: function(){ return getChannel; }
 	});
 
 	this.publish = function(msg, publishOptions, cb){
-		return exchangePromise
-			.then(function(exchange){
-				var options = _.extend({}, {persistent: true}, publishOptions);
+		return getChannel
+			.then(function(chan){
+
+				var options = _.extend({}, PUBLISH_DEFAULTS, publishOptions);
 				var key = (options.key || 'blank').toString();
 
 				delete options.key;
 
 				msg._exchange = msg._exchange || exchangeName;
-				msg._ticks = Date.now();
-				
-				return exchange.publish(key, msg, options, cb);
+
+				if (confirmMode){
+					chan.publish(exchangeName, key, Buffer(JSON.stringify(msg)), options);
+					return chan.waitForConfirms()
+						.then(() => {
+							if (_.isFunction(cb)) cb();
+							return true;
+						});
+				}
+
+				return chan.publish(exchangeName, key, Buffer(JSON.stringify(msg)), options);
 			});
 	};
 
@@ -97,45 +103,33 @@ function Exchange(params){
 
 		msg._exchange = msg._exchange || exchangeName;
 
-		var d = q.defer(),
-			queueName = 'delay_' + exchangeName  +'_by_'+publishOptions.delay+'__'+publishOptions.key;
+		return new Promise(function(resolve, reject) {
+			var queueName = 'delay_' + exchangeName  +'_by_'+publishOptions.delay+'__'+publishOptions.key;
 
-		new Queue({
-			name: queueName,
-			exclusive: false,
-			autoDelete: false,
-			arguments: {
-				'x-dead-letter-exchange': exchangeName,
-				'x-dead-letter-routing-key': publishOptions.key,
-				'x-message-ttl': publishOptions.delay,
-			},
-			ready: function(){
-				defaultExchangePublish(msg, { key: queueName })
-					.then(function() {
-						d.resolve();
-					})
-					.catch(function(err) {
-						d.reject(err);
-					});
-			}
-		});
-
-
-		return d.promise;
-	};
-
-	this.sendStopConsumer  = function(pid){
-		exchangePromise
-			.then(function(exchange){
-				var stopMsg = {
-					__stop: '_wabbitzzz_stop_please',
-					pid: pid,
-				};
-
-				exchange.publish('_', stopMsg, {persistent: false});
+			var tmp = new Queue({
+				name: queueName,
+				exclusive: false,
+				autoDelete: false,
+				arguments: {
+					'x-dead-letter-exchange': exchangeName,
+					'x-dead-letter-routing-key': publishOptions.key,
+					'x-message-ttl': publishOptions.delay,
+				},
+				ready: function() {
+					defaultExchangePublish(msg, { key: queueName })
+						.then(function() {
+							resolve(true);
+						})
+						.catch(function(err) {
+							reject(err);
+						})
+						.finally(function(){
+							tmp.close();
+						});
+				},
 			});
+		});
 	};
-
 }
 
 util.inherits(Exchange, EventEmitter);

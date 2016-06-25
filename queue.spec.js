@@ -1,5 +1,5 @@
 var Queue = require('./queue'),
-	q = require('q'),
+	Promise = require('bluebird'),
 	_ = require('lodash'),
 	Exchange = require('./exchange'),
 	ezuuid = require('ezuuid'),
@@ -76,7 +76,7 @@ describe('queue', function(){
 		var exchange1 = new Exchange({name: exchangeName1, autoDelete: true, durable: false});
 		var exchange2 = new Exchange({name: exchangeName2, autoDelete: true, durable: false});
 
-		q.all([exchange1.ready, exchange2.ready])
+		Promise.all([exchange1.ready, exchange2.ready])
 			.then(function(){
 				var queue = new Queue({
 					autoDelete: true,

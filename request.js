@@ -1,17 +1,14 @@
-var CONN_STRING = process.env.WABBITZZZ_URL || 'amqp://localhost';
-var amqplib = require('amqplib');
-var q = require('q');
+var getConnection = require('./get-connection');
 var ezuuid = require('ezuuid');
 var _ = require('lodash');
 
-var initChannel = q(amqplib.connect(CONN_STRING))
+var initChannel = getConnection()
 	.then(function(conn) {
-		process.once('SIGINT', conn.close.bind(conn));
 		return conn.createChannel();
 	})
 	.then(function(chan){
 		var options = { noAck: true };
-		return chan.consume('amq.rabbitmq.reply-to',handleResponse, options)
+		return chan.consume('amq.rabbitmq.reply-to', handleResponse, options)
 			.then(function(){
 				return chan.assertExchange('_rpc_send_direct', 'direct', { durable: true });
 			})
@@ -104,6 +101,6 @@ module.exports = function(){
 				console.error(err);
 			});
 	};
-
 };
+
 module.exports.createOptions = createOptions;

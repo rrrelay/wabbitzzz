@@ -67,13 +67,13 @@ module.exports = function(){
 							persistent: false,
 							correlationId: msg._correlationId,
 						};
+
 						if (!listenOnly){
 							if (err){
 								return defaultExchange.publish({
 									_rpcError:true, 
 									_message: err.toString(),
-								}, publishOptions
-								);
+								}, publishOptions);
 							} else {
 								// TODO: stop doing this and bump the major version
 								exchange.publish(res);

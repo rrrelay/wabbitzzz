@@ -1,5 +1,5 @@
 var _ = require('lodash');
-var q = require('q');
+var Promise = require('bluebird');
 var ezuuid = require('ezuuid');
 var getConnection = require('./get-connection');
 var ONE_SECOND = 1000;
@@ -49,61 +49,62 @@ function bulkDequeue(opt, cb){
 
 	}, delay, { maxWait: maxDelay });
 
-	function _getMessages(queue){
-		// give me all the messages
-		var bulkOptions = {
-			ack: true,
-			prefetchCount: 0,
-		};
+	function _getMessages(chan){
+		return chan.consume(queueName, function (message) {
+			if (!message) return false;
 
-		queue.subscribe(bulkOptions, function (message, headers, deliveryInfo, ack) {
+			var msg = JSON.parse(message.content);
+			console.dir(msg);
 			deliveries.push({
-				message: message,
-				ack: ack.acknowledge.bind(ack),
+				message: msg,
+				ack: chan.ack.bind(chan, message),
 			});
 
 			done();
-		});
-
-		return queue;
+		}, { noAck: false })
+		.then(_.constant(chan));
 	}
 
 	function _getQueue(connection){
-		var d = q.defer();
+		return Promise.resolve(connection.createChannel())
+			.then(function(chan){
+				chan.on('error', function(err){
+					console.error('error with bulk-dequeue', err);
+				});
 
-		var myQ = connection.queue(queueName, options, function(queue){
-			function onBindComplete(){
-				d.resolve(queue);
-
+				return chan.assertQueue(queueName, options)
+					.then(_.constant(chan));
+			})
+			.then(function(chan){
+				// this means give me all the messages
+				return chan.prefetch(0)
+					.then(_.constant(chan));
+			})
+			.then(function(chan){
+				return _.chain(exchangeNames)
+					.toArray()
+					.map(function(exchangeName){
+						return chan.bindQueue(queueName, exchangeName, options.key);
+					})
+					.thru(Promise.all)
+					.value()
+					.then(_.constant(chan));
+			})
+			.then(function(chan){
 				if (_.isFunction(options.ready)){
 					options.ready();
 				}
-			}
 
-			if (_.isEmpty(exchangeNames)){
-				queue.bind(options.key, onBindComplete);
-			} else {
-				exchangeNames.forEach(function(exchangeName){
-					queue.bind(exchangeName, options.key, onBindComplete);
-				});
-			}
-		});
-
-		myQ.on('error', function(err){
-			console.log('unable to bind to queue: '+ name);
-			console.error(err);
-			d.reject(err);
-		});
-
-		return d.promise;
+				return chan;
+			});
 	}
 
 	return getConnection()
 		.then(_getQueue)
 		.then(_getMessages)
-		.then(function(queue){
+		.then(function(chan){
 			return {
-				destory: queue.destory.bind(queue),
+				destory: chan.deleteQueue.bind(chan, queueName),
 			};
 		});
 }

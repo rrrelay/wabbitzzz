@@ -1,20 +1,19 @@
 {
   "name": "wabbitzzz",
-  "version": "2.0.3",
+  "version": "3.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "mocha rpc.spec.js get/get.spec.js queue.spec.js exchange.spec.js",
+    "test": "mocha rpc.spec.js get/get.spec.js queue.spec.js exchange.spec.js bulk-dequeue.spec.js",
     "testing": "nodemon mocha queue.spec.js"
   },
   "author": "",
   "license": "none",
   "dependencies": {
-    "amqp": "^0.2.4",
     "amqplib": "^0.4.1",
+    "bluebird": "^3.4.1",
     "ezuuid": "0.0.1",
-    "lodash": "^3.10.0",
-    "q": "~1.0.0"
+    "lodash": "^3.10.0"
   },
   "devDependencies": {
     "chai": "^1.9.1",
