@@ -38,8 +38,8 @@ function getNoAckParam(params){
 		throw new Error('cannot specifiy both ack and noAck params');
 	}
 
-	if (params.noAck) return !!params.noAck;
-	if (params.ack) return !params.ack;
+	if (params.noAck !== undefined) return !!params.noAck;
+	if (params.ack !== undefined) return !params.ack;
 
 	// default is to ack
 	return false;
