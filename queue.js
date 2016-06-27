@@ -133,10 +133,24 @@ function Queue(params){
 		queuePromise
 			.then(function(chan){
 				if (!chan) return false;
+
 				return chan.consume(name, function(msg) {
 					if (!msg){
-						console.log('error: got a null message from ' + name, msg);
+						// this means the queue has been cancelled.
 						return false;
+					}
+
+					var myMessage;
+					try {
+						myMessage = JSON.parse(msg.content.toString());
+
+						if (msg.properties){
+							if (msg.properties.replyTo) myMessage._replyTo = msg.properties.replyTo;
+							if (msg.properties.correlationId) myMessage._correlationId = msg.properties.correlationId;
+						}
+					} catch (err){
+						console.error('error deserializing message', err);
+						myMessage = {};
 					}
 
 					var doneCalled = false;
@@ -150,10 +164,10 @@ function Queue(params){
 						}
 
 						if (useErrorQueue) {
-							msg._error = _.extend({}, {message: error.message, stack: error.stack}, error);
+							myMessage._error = _.extend({}, {message: error.message, stack: error.stack}, error);
 							var options = { key: errorQueueName, persistent: true };
 
-							defaultExchangePublish(msg, options)
+							defaultExchangePublish(myMessage, options)
 								.then(function(){
 									return chan.ack(msg);
 								})
@@ -163,25 +177,16 @@ function Queue(params){
 								});
 						} else {
 							console.log('bad ack', error);
-							chan.close();
 						}
 					};
 
 					try {
-						var myMessage = JSON.parse(msg.content.toString());
-
-						if (msg.properties){
-							if (msg.properties.replyTo) myMessage._replyTo = msg.properties.replyTo;
-							if (msg.properties.correlationId) myMessage._correlationId = msg.properties.correlationId;
-						}
-
 						fn(myMessage, done);
 					} catch (e){
 						if (!doneCalled){
 							done(e.toString());
 						}
 					}
-
 				}, { noAck: noAck });
 			})
 			.then(res => {

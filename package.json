@@ -10,7 +10,6 @@
   "author": "",
   "license": "none",
   "dependencies": {
-    "amqp": "^0.2.4",
     "amqplib": "^0.4.1",
     "bluebird": "^3.4.1",
     "ezuuid": "0.0.1",
