@@ -1,7 +1,7 @@
 var uuid = require('ezuuid');
 var _ = require('lodash');
 var defaultExchangePublish = require('./default-exchange-publish');
-var Promise = require('q');
+var Promise = require('bluebird');
 var getConnection = require('./get-connection');
 
 var DEFAULTS = {
@@ -49,12 +49,16 @@ function Queue(params){
 	params = _.extend({}, DEFAULTS, params);
 
 	var name = params.name || ((params.namePrefix || '') + uuid()),
-		useErrorQueue = params.useErrorQueue,
+		useErrorQueue = !!params.useErrorQueue,
 		errorQueueName = name + '_error',
 		routingKey = (params.key || '#').toString(),
-		prefetchCount = params.prefetchCount || 1,
+		prefetchCount = params.prefetchCount|| 1,
 		ctag,
 		noAck = getNoAckParam(params);
+
+	if (noAck){
+		prefetchCount = 0;
+	}
 
 	var exchangeNames = _.chain([params.exchangeNames])
 		.union([params.exchangeName])
@@ -72,52 +76,72 @@ function Queue(params){
 	delete params.ack;
 
 	function bindQueue(chan, exchangeNames, routingKey){
-		return _.chain(exchangeNames)
+		var t = _.chain(exchangeNames)
 			.toArray()
 			.map(function(exchangeName){
-				return chan.bindQueue(
-					name,
-					exchangeName,
-					routingKey
-					);
+				return chan.bindQueue(name, exchangeName, routingKey);
 			})
 			.thru(Promise.all)
 			.value()
 			.then(_.constant(chan));
+
+		return t;
 	}
 
 	var queuePromise = assertQueue(name, exchangeNames, params)
-		.then(function(chan) {
-			return bindQueue(chan, exchangeNames, routingKey);
-		})
 		.then(function(chan){
-			if (params.useErrorQueue){
-				return chan.assertQueue(errorQueueName, { durable: true })
-					.then(_.constant(chan));
-			}
+			chan.on('error', function(err){
+				console.log('error binding ' + name);
+				console.log(err.message);
+				console.error(err);
+				console.log('------------------------');
+			});
 
-			return chan;
-		})
-		.then(function(chan){
-			return chan.prefetch(prefetchCount)
-				.then(_.constant(chan));
-		})
-		.then(function(chan){
-			if (_.isFunction(params.ready)) {
-				params.ready();
-			}
+			return Promise.resolve(true)
+				.then(function(){
+					return chan;
+				})
+				.then(function(chan){
+					if (params.useErrorQueue){
+						return chan.assertQueue(errorQueueName, { durable: true })
+							.then(_.constant(chan));
+					}
 
-			return chan;
+					return chan;
+				})
+				.then(function(chan){
+					return chan.prefetch(prefetchCount)
+						.then(_.constant(chan));
+				})
+				.then(function(chan) {
+					return bindQueue(chan, exchangeNames, routingKey);
+				})
+				.then(function(chan){
+					if (_.isFunction(params.ready)) {
+						params.ready();
+					}
+
+					return chan;
+				})
+				.catch(function(err){
+					console.error(err);
+					return false;
+				});
 		});
 
 	var receieveFunc = function(fn){
 		queuePromise
 			.then(function(chan){
-				console.log('consuming from ' + name + ' ' + noAck);
+				if (!chan) return false;
 				return chan.consume(name, function(msg) {
+					if (!msg){
+						console.log('error: got a null message from ' + name, msg);
+						return false;
+					}
+
 					var doneCalled = false;
 					var done = function(error){
-						if (!noAck) return;
+						if (noAck) return;
 
 						doneCalled = true;
 
@@ -137,19 +161,20 @@ function Queue(params){
 									console.error(error);
 									console.error(publishError);
 								});
-
 						} else {
-							console.log('HEY ...........................');
-							console.dir(error);
-							console.log('BYE ...........................');
-
+							console.log('bad ack', error);
 							chan.close();
 						}
 					};
 
 					try {
 						var myMessage = JSON.parse(msg.content.toString());
-						console.dir(myMessage);
+
+						if (msg.properties){
+							if (msg.properties.replyTo) myMessage._replyTo = msg.properties.replyTo;
+							if (msg.properties.correlationId) myMessage._correlationId = msg.properties.correlationId;
+						}
+
 						fn(myMessage, done);
 					} catch (e){
 						if (!doneCalled){
@@ -170,30 +195,32 @@ function Queue(params){
 
 	receieveFunc.stop = function(){
 		return queuePromise
-			.then(function(queue){
+			.then(function(chan){
 				if (!ctag) return false;
 
-				return queue.unsubscribe(ctag);
+				return chan.cancel(ctag);
 			});
 	};
 
 	receieveFunc.close = function(){
 		return queuePromise
-			.then(function(queue){
-				queue.close();
+			.then(function(chan){
+				chan.close();
 			});
 	};
 
 	receieveFunc.destroy = function(){
 		return queuePromise
-			.then(function(queue){
-
-				return queue.destroy();
+			.then(function(chan){
+				return chan.deleteQueue(name);
 			});
 	};
 
 	var property = Object.defineProperty.bind(Object, receieveFunc);
 	property('ready', {
+		get: function(){ return queuePromise; }
+	});
+	property('started', {
 		get: function(){ return queuePromise; }
 	});
 

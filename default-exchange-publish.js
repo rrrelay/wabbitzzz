@@ -6,12 +6,6 @@ var PUBLISH_DEFAULTS = {
 	contentType: 'application/json',
 };
 
-function mkCallback(i) {
-	return function(err) {
-		if (err !== null) { console.error('Message %d failed!', i); }
-		else { console.log('Message %d confirmed', i); }
-	};
-}
 function _publish(msg, options){
 	return getConnection()
 		.then(function(conn){
@@ -22,18 +16,11 @@ function _publish(msg, options){
 			options = _.extend({}, PUBLISH_DEFAULTS, options);
 			delete options.key;
 
-			console.log('publishing to ' + key);
-			console.dir(options);
-			chan.publish('', key, Buffer(JSON.stringify(msg)), options)
+			chan.publish('', key, Buffer(JSON.stringify(msg)), options);
+
 			return chan.waitForConfirms()
-				.then(function(res){
-					console.dir(res);
-					console.log('all good');
-					return chan.close();
-				})
 				.then(function(){
-					console.log('all good');
-					return true;
+					return chan.close();
 				});
 		})
 		.timeout(20 * 1000);

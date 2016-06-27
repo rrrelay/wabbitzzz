@@ -16,7 +16,6 @@ describe('exchange', function(){
 				exclusive: true,
 				name: queueName,
 				ready: function(){
-					console.log('queue is ready!!!!!!!!!');
 					defaultExchanage.publish(
 							{message:message}, 
 							{key:queueName}
@@ -131,14 +130,12 @@ describe('exchange', function(){
 			});
 
 		exchange.on('ready', function(){
-			console.log('exchange ready');
 			var queue = new Queue({
 				autoDelete: true,
 				exclusive: true,
 				key: '111',
 				exchangeNames: [exchangeName],
 				ready: function(){
-					console.log('delay pub');
 					beginTicks = Date.now();
 					exchange.delayedPublish({message: message}, {delay:3100, key: '111' });
 				}

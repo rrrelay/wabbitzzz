@@ -1,5 +1,5 @@
 var bulkDequeue = require('./bulk-dequeue'),
-	q = require('q'),
+	Promise = require('bluebird'),
 	_ = require('lodash'),
 	Exchange = require('./exchange'),
 	ezuuid = require('ezuuid'),

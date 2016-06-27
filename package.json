@@ -12,9 +12,9 @@
   "dependencies": {
     "amqp": "^0.2.4",
     "amqplib": "^0.4.1",
+    "bluebird": "^3.4.1",
     "ezuuid": "0.0.1",
-    "lodash": "^3.10.0",
-    "q": "~1.0.0"
+    "lodash": "^3.10.0"
   },
   "devDependencies": {
     "chai": "^1.9.1",

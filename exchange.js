@@ -1,11 +1,10 @@
-var q = require('q'),
+var Promise = require('bluebird'),
 	util = require('util'),
 	getConnection = require('./get-connection'),
 	Queue = require('./queue'),
 	_ = require('lodash'),
 	EventEmitter = require('events').EventEmitter,
-	defaultExchangePublish = require('./default-exchange-publish'),
-	EventEmitter = require('events').EventEmitter;
+	defaultExchangePublish = require('./default-exchange-publish');
 
 var EXCHANGE_DEFAULTS = {
 	type: 'fanout',
@@ -104,31 +103,32 @@ function Exchange(params){
 
 		msg._exchange = msg._exchange || exchangeName;
 
-		var d = q.defer(),
-			queueName = 'delay_' + exchangeName  +'_by_'+publishOptions.delay+'__'+publishOptions.key;
+		return new Promise(function(resolve, reject) {
+			var queueName = 'delay_' + exchangeName  +'_by_'+publishOptions.delay+'__'+publishOptions.key;
 
-		new Queue({
-			name: queueName,
-			exclusive: false,
-			autoDelete: false,
-			arguments: {
-				'x-dead-letter-exchange': exchangeName,
-				'x-dead-letter-routing-key': publishOptions.key,
-				'x-message-ttl': publishOptions.delay,
-			},
-			ready: function(){
-				defaultExchangePublish(msg, { key: queueName })
-					.then(function() {
-						d.resolve();
-						console.log('delayed publish sent');
-					})
-					.catch(function(err) {
-						d.reject(err);
-					});
-			}
+			var tmp = new Queue({
+				name: queueName,
+				exclusive: false,
+				autoDelete: false,
+				arguments: {
+					'x-dead-letter-exchange': exchangeName,
+					'x-dead-letter-routing-key': publishOptions.key,
+					'x-message-ttl': publishOptions.delay,
+				},
+				ready: function() {
+					defaultExchangePublish(msg, { key: queueName })
+						.then(function() {
+							resolve(true);
+						})
+						.catch(function(err) {
+							reject(err);
+						})
+						.finally(function(){
+							tmp.close();
+						});
+				},
+			});
 		});
-
-		return d.promise;
 	};
 }
 
