@@ -191,4 +191,54 @@ describe('queue', function(){
 		});
 	});
 
+	it('should be able to bind with different routing keys', function(done){
+		this.timeout(5000);
+
+		var exchangeName1 = ezuuid(),
+			exchangeName2 = ezuuid(),
+			message1 = ezuuid(),
+			message2 = ezuuid();
+
+		var key1 = 'some_cool_key';
+		var key2 = 'some_lame_key';
+		var exchange1 = new Exchange({name: exchangeName1, autoDelete: true, durable: false, type: 'direct'});
+		var exchange2 = new Exchange({name: exchangeName2, autoDelete: true, durable: false, type: 'direct'});
+
+		Promise.all([exchange1.ready, exchange2.ready])
+			.then(function(){
+				var queue = new Queue({
+					autoDelete: true,
+					exclusive: true,
+					exchanges: [
+						{ name: exchangeName1, key: key1 },
+						{ name: exchangeName2, key: key2 },
+					],
+				});
+
+				var gotMessage1 = false,
+					gotMessage2 = false;
+				
+				queue(function(msg, ack){
+					if (msg.msg === message1) {
+						gotMessage1 = true;
+					} else if (msg.msg === message2) {
+						gotMessage2 = true;
+					} else {
+						done(new Error('got a bad message'));
+					}
+
+					ack();
+
+					if (gotMessage1 && gotMessage2){
+						done();
+					}
+				});
+
+				_.delay(exchange1.publish, 200, {msg:message1}, {key: 'some_wrong_key' });
+				_.delay(exchange2.publish, 200, {msg:message2}, {key: 'some_wrong_key' });
+				_.delay(exchange1.publish, 400, {msg:message1}, {key: key1 });
+				_.delay(exchange2.publish, 400, {msg:message2}, {key: key2 });
+			});
+	});
+
 });

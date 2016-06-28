@@ -41,7 +41,6 @@ function Queue(params){
 	var name = params.name || ((params.namePrefix || '') + uuid()),
 		useErrorQueue = !!params.useErrorQueue,
 		errorQueueName = name + '_error',
-		routingKey = (params.key || '#').toString(),
 		prefetchCount = params.prefetchCount|| 1,
 		ctag,
 		noAck = getNoAckParam(params);
@@ -50,26 +49,40 @@ function Queue(params){
 		prefetchCount = 0;
 	}
 
-	var exchangeNames = _.chain([params.exchangeNames])
-		.union([params.exchangeName])
+	var bindings = _.chain([params.exchangeNames])
+		.concat([params.exchangeName])
+		.concat([params.bindings])
+		.concat([params.exchanges])
 		.flatten()
-		.uniq()
 		.filter(Boolean)
+		.map(function(ex){
+			if (_.isObject(ex)) return ex;
+			if (_.isString(ex)) return  { name: ex };
+			throw new Error('invalid binding/exchange');
+		})
+		.uniq(function(binding){ return binding.name; })
+		.forEach(function(binding){
+			if (binding.key !== undefined) return;
+
+			binding.key = binding.key || (params.key || '#').toString();
+		})
 		.value();
+
 
 	delete params.exchangeName;
 	delete params.exchangeNames;
+	delete params.bindings;
 	delete params.name;
 	delete params.useErrorQueue;
 	delete params.key;
 	delete params.noAck;
 	delete params.ack;
 
-	function bindQueue(chan, exchangeNames, routingKey){
-		var t = _.chain(exchangeNames)
+	function bindQueue(chan, bindings){
+		var t = _.chain(bindings)
 			.toArray()
-			.map(function(exchangeName){
-				return chan.bindQueue(name, exchangeName, routingKey);
+			.map(function(binding){
+				return chan.bindQueue(name, binding.name, binding.key);
 			})
 			.thru(Promise.all)
 			.value()
@@ -78,7 +91,7 @@ function Queue(params){
 		return t;
 	}
 
-	var queuePromise = assertQueue(name, exchangeNames, params)
+	var queuePromise = assertQueue(name, bindings, params)
 		.then(function(chan){
 			chan.on('error', function(err){
 				console.log('error binding ' + name);
@@ -104,7 +117,7 @@ function Queue(params){
 						.then(_.constant(chan));
 				})
 				.then(function(chan) {
-					return bindQueue(chan, exchangeNames, routingKey);
+					return bindQueue(chan, bindings);
 				})
 				.then(function(chan){
 					if (_.isFunction(params.ready)) {
