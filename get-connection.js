@@ -13,7 +13,7 @@ function _getConnection(){
 			}
 
 			process.once('SIGINT', close);
-			process.once('SIGTERM', close);
+//			process.once('SIGTERM', close);
 			return conn;
 		});
 }
