@@ -5,7 +5,15 @@ var Promise = require('bluebird');
 function _getConnection(){
 	return Promise.resolve(amqplib.connect(CONN_STRING))
 		.then(function(conn) {
-			process.once('SIGINT', conn.close.bind(conn));
+			var closed = false;
+			function close(){
+				if (closed) return;
+				closed = true;
+				conn.close();
+			}
+
+			process.once('SIGINT', close);
+			process.once('SIGTERM', close);
 			return conn;
 		});
 }
