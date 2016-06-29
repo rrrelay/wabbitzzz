@@ -4,6 +4,14 @@ var defaultExchangePublish = require('./default-exchange-publish');
 var Promise = require('bluebird');
 var getConnection = require('./get-connection');
 
+var EXCHANGE_ATTRIBUTE_NAMES = [
+	'durable',
+	'autoDelete',
+	'arguments',
+	'internal',
+	'alternateExchange',
+];
+
 var DEFAULTS = {
 	exclusive: false,
 	autoDelete: false,
@@ -60,7 +68,7 @@ function Queue(params){
 			if (_.isString(ex)) return  { name: ex };
 			throw new Error('invalid binding/exchange');
 		})
-		.uniq(function(binding){ return binding.name; })
+		.uniq(function(binding){ return [binding.name, binding.key].join('_'); })
 		.forEach(function(binding){
 			if (binding.key !== undefined) return;
 
@@ -78,17 +86,34 @@ function Queue(params){
 	delete params.noAck;
 	delete params.ack;
 
+	function bindingHasExchangeAttributes(binding){
+		return !_.chain(binding)
+			.keys()
+			.intersection(EXCHANGE_ATTRIBUTE_NAMES)
+			.isEmpty()
+			.value();
+	}
+
 	function bindQueue(chan, bindings){
-		var t = _.chain(bindings)
+		return _.chain(bindings)
 			.toArray()
 			.map(function(binding){
+				if (binding.type){
+					var exParams = _.chain(EXCHANGE_ATTRIBUTE_NAMES)
+						.filter(function(k){ return binding[k] !== undefined; })
+						.map(function(k){ return [k, binding[k]]; })
+						.fromPairs()
+						.value();
+
+					return chan.assertExchange(binding.name, binding.type, exParams)
+						.then(function(){ return chan.bindQueue(name, binding.name, binding.key); });
+				}
+
 				return chan.bindQueue(name, binding.name, binding.key);
 			})
 			.thru(Promise.all)
 			.value()
 			.then(_.constant(chan));
-
-		return t;
 	}
 
 	var queuePromise = assertQueue(name, bindings, params)

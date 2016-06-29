@@ -17,11 +17,11 @@ describe('bulk-dequeue', function(){
 
 		exchange1.on('ready', function(){
 			var readMessages = function(messages, ack){
-				var msg = _.first(messages);
+				var msg = _.head(messages);
 				if (msg.key !== message1 && msg.key !== message2) {
 					return done('got a message I shouldnt have');
 				}
-				var msg = _.first(_.rest(messages));
+				var msg = _.head(_.tail(messages));
 				if (msg.key !== message1 && msg.key !== message2) {
 					return done('got a message I shouldnt have');
 				}
@@ -59,18 +59,18 @@ describe('bulk-dequeue', function(){
 			var readMessages = function(messages, ack){
 				var msg;
 				if (!firstBatchGood){
-					msg = _.first(messages);
+					msg = _.head(messages);
 					if (msg.key !== message1 && msg.key !== message2) {
 						return done('1: got a message I shouldnt have.');
 					}
-					msg = _.first(_.rest(messages));
+					msg = _.head(_.tail(messages));
 					if (msg.key !== message1 && msg.key !== message2) {
 						return done('2: got a message I shouldnt have.');
 					}
 					firstBatchGood = true;
 					ack();
 				} else {
-					msg = _.first(messages);
+					msg = _.head(messages);
 					if (msg.key !== message3) {
 						return done('3: got a message I shouldnt have.');
 					}

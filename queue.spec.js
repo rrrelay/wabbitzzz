@@ -241,4 +241,51 @@ describe('queue', function(){
 			});
 	});
 
+	it('should be able to create an exchange on the fly if give the data', function(done){
+		var exchangeName1 = ezuuid(),
+			exchangeName2 = ezuuid(),
+			message1 = ezuuid(),
+			message2 = ezuuid();
+
+		var key1 = 'some_cool_key';
+		var key2 = 'some_lame_key';
+
+		var queue = new Queue({
+			autoDelete: true,
+			exclusive: true,
+			bindings: [
+				{ name: exchangeName1, key: key1, type: 'direct', durable: false, autoDelete: true },
+				{ name: exchangeName2, key: key2, type: 'direct', durable: false, autoDelete: true },
+			],
+			ready: function(){
+				// now that the binding should have created the exchanges already
+				var exchange1 = new Exchange({name: exchangeName1, autoDelete: true, durable: false, type: 'direct'});
+				var exchange2 = new Exchange({name: exchangeName2, autoDelete: true, durable: false, type: 'direct'});
+
+				_.delay(exchange1.publish, 200, {msg:message1}, {key: 'some_wrong_key' });
+				_.delay(exchange2.publish, 200, {msg:message2}, {key: 'some_wrong_key' });
+				_.delay(exchange1.publish, 400, {msg:message1}, {key: key1 });
+				_.delay(exchange2.publish, 400, {msg:message2}, {key: key2 });
+			},
+		});
+
+		var gotMessage1 = false,
+			gotMessage2 = false;
+		
+		queue(function(msg, ack){
+			if (msg.msg === message1) {
+				gotMessage1 = true;
+			} else if (msg.msg === message2) {
+				gotMessage2 = true;
+			} else {
+				done(new Error('got a bad message'));
+			}
+
+			ack();
+
+			if (gotMessage1 && gotMessage2){
+				done();
+			}
+		});
+	});
 });

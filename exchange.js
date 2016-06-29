@@ -10,7 +10,6 @@ var EXCHANGE_DEFAULTS = {
 	type: 'fanout',
 	autoDelete: false,
 	durable: true,
-	reconnect: true,
 	name: '',
 };
 
