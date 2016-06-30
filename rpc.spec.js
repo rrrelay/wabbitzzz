@@ -26,19 +26,6 @@ describe('rpc', function(){
 			cb(null, { isResponse: true, msg:req.msg+ '_' + key});
 		});
 
-		var intercept = new Queue({
-			exclusive: true,
-			autoDelete: true,
-			exchangeName: METHOD_NAME,
-		});
-
-		intercept(function(msg, ack){
-			console.log('|---------intercept------------|');
-			console.dir(msg);
-			console.log('|---------------------|');
-			ack();
-		});
-
 		listen.ready
 			.then(function(){
 				return _.chain(_.range(6))
@@ -75,21 +62,6 @@ describe('rpc', function(){
 			console.log('i just don\'t care');
 		});
 
-		var intercept = new Queue({
-			exclusive: true,
-			autoDelete: true,
-			durable: false,
-			exchangeName: METHOD_NAME,
-		});
-
-		intercept(function(msg, ack){
-			console.log('|---------intercept------------|');
-			console.dir(msg);
-			console.log('|---------------------|');
-			ack();
-		});
-
-
 		request(METHOD_NAME)({msg: 'goodbye cruel world'}, function(err, res){
 			console.error(err);
 			console.dir(res);
@@ -101,17 +73,6 @@ describe('rpc', function(){
 		this.timeout(60000);
 
 		var METHOD_NAME = 'beaches_do_not_exist';
-
-		var intercept = new Queue({
-			exclusive: true,
-			autoDelete: true,
-			durable: false,
-			exchangeName: METHOD_NAME,
-		});
-
-		intercept(function(msg, ack){
-			ack();
-		});
 
 		request(METHOD_NAME, {timeout:2000})({msg: 'goodbye cruel world'}, function(err, res){
 			if (err) return done();

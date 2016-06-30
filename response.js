@@ -35,10 +35,6 @@ module.exports = function(){
 	var options = createOptions.apply(null, _.toArray(arguments)),
 		key = ezuuid(),
 		methodName = options.methodName,
-		exchange = exchanges[methodName] || new Exchange({
-			type: 'topic',
-			name: methodName,
-		}),
 		queueName = options.appName + methodName + (options.shared ? '' : ('_' + key)) + '_rpc', // trailing _rpc important for policy regex
 		queue = new Queue({
 			name: queueName,
@@ -71,13 +67,10 @@ module.exports = function(){
 						if (!listenOnly){
 							if (err){
 								return defaultExchange.publish({
-									_rpcError:true, 
+									_rpcError:true,
 									_message: err.toString(),
 								}, publishOptions);
 							} else {
-								// TODO: stop doing this and bump the major version
-								exchange.publish(res);
-
 								return defaultExchange.publish(res, publishOptions);
 							}
 						}
