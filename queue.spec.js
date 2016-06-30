@@ -173,7 +173,7 @@ describe('queue', function(){
 				exchangeName: exchangeName,
 				ready: function(){
 					console.log('pooblishing');
-					exchange1.publish({key:message});
+					exchange1.publish({ key: message });
 				},
 			});
 
@@ -184,10 +184,8 @@ describe('queue', function(){
 				ack(new Error(errorKey));
 
 				queue.destroy();
-
 				_readError();
 			});
-
 		});
 	});
 

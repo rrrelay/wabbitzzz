@@ -240,4 +240,52 @@ describe('exchange', function(){
 		});
 	});
 
+	it('should be able to receive multiple confirms', function(done){
+		this.timeout(5000);
+
+		var message = ezuuid(),
+			exchangeName = ezuuid(),
+			exchange = new Exchange({
+				name: exchangeName, 
+				autoDelete: true,
+				confirm:true
+			});
+
+		var publishConfirmed1 = false;
+		var publishConfirmed2 = false;
+
+		exchange.on('ready', function(){
+			var queue = new Queue({
+				autoDelete: true,
+				exclusive: true,
+				exchangeNames: [exchangeName],
+				ready: function(){
+					exchange.publish({message: message}, {}, function(){
+						publishConfirmed1 = true;
+					});
+					exchange.publish({message: message}, {}, function(){
+						publishConfirmed2 = true;
+					});
+				}
+			});
+
+			queue(function(msg, ack){
+				// give it a second.  sometimes the confirms come in after the message
+				setTimeout(function(){
+					if (msg.message !== message) return done('got a message I shouldnt have');
+
+					if (!publishConfirmed1 || !publishConfirmed2){
+						ack(new Error('not confirmed!'));
+					}
+
+					if (publishConfirmed1 && publishConfirmed2){
+						ack();
+						done();
+						queue.close()
+					}
+				}, 1000);
+			});
+		});
+	});
+
 });

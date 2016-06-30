@@ -130,7 +130,7 @@ function Queue(params){
 					return chan;
 				})
 				.then(function(chan){
-					if (params.useErrorQueue){
+					if (useErrorQueue){
 						return chan.assertQueue(errorQueueName, { durable: true })
 							.then(_.constant(chan));
 					}
@@ -193,7 +193,10 @@ function Queue(params){
 
 						if (useErrorQueue) {
 							myMessage._error = _.extend({}, {message: error.message, stack: error.stack}, error);
-							var options = { key: errorQueueName, persistent: true };
+							var options = {
+								key: errorQueueName,
+								persistent: true,
+							};
 
 							defaultExchangePublish(myMessage, options)
 								.then(function(){

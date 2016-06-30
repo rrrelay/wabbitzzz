@@ -6,11 +6,13 @@ var PUBLISH_DEFAULTS = {
 	contentType: 'application/json',
 };
 
-function _publish(msg, options){
-	return getConnection()
+var channel = getConnection()
 		.then(function(conn){
 			return conn.createConfirmChannel();
-		})
+		});
+
+function _publish(msg, options){
+	return channel
 		.then(function(chan){
 			var key = options.key;
 			options = _.extend({}, PUBLISH_DEFAULTS, options);
@@ -18,10 +20,7 @@ function _publish(msg, options){
 
 			chan.publish('', key, Buffer(JSON.stringify(msg)), options);
 
-			return chan.waitForConfirms()
-				.then(function(){
-					return chan.close();
-				});
+			return chan.waitForConfirms();
 		})
 		.timeout(20 * 1000);
 }
