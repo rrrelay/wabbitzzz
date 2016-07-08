@@ -15,6 +15,10 @@ function _getConnection(){
 			process.once('SIGINT', close);
 //			process.once('SIGTERM', close);
 			return conn;
+		})
+		.catch(function(err){
+			console.error('wabbitzzz connection error: ', err);
+			throw err;
 		});
 }
 
