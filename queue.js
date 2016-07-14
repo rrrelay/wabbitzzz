@@ -220,7 +220,7 @@ function Queue(params){
 					}
 				}, { noAck: noAck });
 			})
-			.then(res => {
+			.then(function(res){
 				ctag = res.consumerTag;
 			})
 			.catch(function(err){
