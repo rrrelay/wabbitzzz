@@ -87,7 +87,7 @@ function Exchange(params){
 				if (confirmMode){
 					chan.publish(exchangeName, key, Buffer(JSON.stringify(msg)), options);
 					return chan.waitForConfirms()
-						.then(() => {
+						.then(function(){
 							if (_.isFunction(cb)) cb();
 							return true;
 						});
