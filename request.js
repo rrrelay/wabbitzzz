@@ -39,7 +39,7 @@ function handleResponse(response){
 	delete requestLookup[correlationId];
 
 	if (msg && msg._rpcError) {
-		requestEntry.cb(new Error(msg.message || 'unknown error in rpc server'));
+		requestEntry.cb(new Error(msg._message || 'unknown error in rpc server'));
 	} else {
 		requestEntry.cb(null, msg);
 	}
