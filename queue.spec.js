@@ -286,4 +286,90 @@ describe('queue', function(){
 			}
 		});
 	});
+
+	it('should be able to add bindings on the fly', function(done){
+		var content = { now: Date.now() };
+		var content2 = { now: Date.now() + '_hello' };
+
+		var exchangeName = 'my_bootleg_exchange';
+		var ex = new Exchange({ name: exchangeName, type: 'topic' });
+
+		var coolExchangeName = 'my_cool_exchange';
+		var coolExchange = new Exchange({ name: coolExchangeName, type: 'topic' });
+
+		var queue = new Queue({
+			autoDelete: true,
+			exclusive: true,
+			bindings: [ { name: exchangeName, type: 'topic', key: '#' } ],
+			ready: function(){
+				ex.publish(content);
+			},
+		});
+
+		var messageCount = 0;
+		queue(function(msg, ack){
+			if (messageCount > 0){
+				expect(msg.now).to.be.equal(content2.now);
+				ack();
+				done();
+			}
+
+			messageCount++;
+
+			console.log('hi');
+			expect(msg.now).to.be.equal(content.now);
+			console.log('still here');
+
+			queue.addBinding({ name: coolExchangeName, key: '1111' })
+				.then(() => coolExchange.publish(content2, { key: '1111' }))
+				.then(() => ack());
+		});
+	});
+
+	it('should be able to remove bindings on the fly', function(done){
+		var content1 = { now: Date.now() };
+		var content2 = { now: Date.now() + '_hello' };
+		var content3 = { now: Date.now() + '_yah_yah' };
+
+		var exchangeName1 = 'my_bootleg_exchange1';
+		var exchange1 = new Exchange({ name: exchangeName1, type: 'topic', confirm: true });
+
+		var exchangeName2 = 'my_cool_exchange2';
+		var exchange2 = new Exchange({ name: exchangeName2, type: 'topic', confirm: true });
+
+		var queue = new Queue({
+			autoDelete: true,
+			exclusive: true,
+			bindings: [
+				{ name: exchangeName1, type: 'topic', key: '#' },
+				{ name: exchangeName2, type: 'topic', key: '#' },
+			],
+			ready: function(){
+				exchange1.publish(content1)
+					.then(() => queue.removeBinding({ name: exchangeName1, key: '#' }))
+					.then(() => exchange1.publish(content2))
+					.then(() => exchange2.publish(content3));
+			},
+		});
+
+		var messageCount = 0;
+		queue(function(msg, ack){
+			if (messageCount === 0){
+				expect(msg.now).to.be.equal(content1.now);
+				ack();
+
+				return messageCount++;
+			}
+
+			if (messageCount === 1){
+				expect(msg.now).to.be.equal(content3.now);
+				ack();
+				done();
+
+				return messageCount++;
+			}
+
+			expect(true).to.be.false;
+		});
+	});
 });

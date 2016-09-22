@@ -157,7 +157,7 @@ function Queue(params){
 				});
 		});
 
-	var receieveFunc = function(fn){
+	var receiveFunc = function(fn){
 		queuePromise
 			.then(function(chan){
 				if (!chan) return false;
@@ -229,7 +229,7 @@ function Queue(params){
 			});
 	};
 
-	receieveFunc.stop = function(){
+	receiveFunc.stop = function(){
 		return queuePromise
 			.then(function(chan){
 				if (!ctag) return false;
@@ -238,14 +238,14 @@ function Queue(params){
 			});
 	};
 
-	receieveFunc.close = function(){
+	receiveFunc.close = function(){
 		return queuePromise
 			.then(function(chan){
 				chan.close();
 			});
 	};
 
-	receieveFunc.destroy = function(){
+	receiveFunc.destroy = function(){
 		return queuePromise
 			.then(function(chan){
 				return chan.deleteQueue(name)
@@ -256,7 +256,29 @@ function Queue(params){
 			});
 	};
 
-	var property = Object.defineProperty.bind(Object, receieveFunc);
+	receiveFunc.addBinding = function(binding){
+		return queuePromise
+			.then(function(chan){
+				return chan.bindQueue(name, binding.name, binding.key);
+			})
+			.then(function(res){
+				console.log('addBinding result', res);
+				return true;
+			});
+	};
+
+	receiveFunc.removeBinding = function(binding){
+		return queuePromise
+			.then(function(chan){
+				return chan.unbindQueue(name, binding.name, binding.key);
+			})
+			.then(function(res){
+				console.log('removeBinding result', res);
+				return true;
+			});
+	};
+
+	var property = Object.defineProperty.bind(Object, receiveFunc);
 	property('ready', {
 		get: function(){ return queuePromise; }
 	});
@@ -264,7 +286,7 @@ function Queue(params){
 		get: function(){ return queuePromise; }
 	});
 
-	return receieveFunc;
+	return receiveFunc;
 }
 
 module.exports = Queue;
