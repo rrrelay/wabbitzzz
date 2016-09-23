@@ -260,10 +260,6 @@ function Queue(params){
 		return queuePromise
 			.then(function(chan){
 				return chan.bindQueue(name, binding.name, binding.key);
-			})
-			.then(function(res){
-				console.log('addBinding result', res);
-				return true;
 			});
 	};
 
@@ -271,10 +267,6 @@ function Queue(params){
 		return queuePromise
 			.then(function(chan){
 				return chan.unbindQueue(name, binding.name, binding.key);
-			})
-			.then(function(res){
-				console.log('removeBinding result', res);
-				return true;
 			});
 	};
 
