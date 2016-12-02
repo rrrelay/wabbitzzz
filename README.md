@@ -45,3 +45,15 @@ rpc(function(err, req, cb){
 
 });
 ```
+
+Policy
+======
+Do it like this.
+```
+Pattern	^(?!amq\.).*(?<!_rpc)$
+Apply to	all
+Definition	
+ha-mode:	all
+ha-sync-mode:	manual
+Priority	-101
+```
