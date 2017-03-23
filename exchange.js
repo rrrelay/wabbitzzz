@@ -101,6 +101,8 @@ function Exchange(params){
 		publishOptions = _.extend({}, DELAYED_PUBLISH_DEFAULTS, publishOptions);
 
 		msg._exchange = msg._exchange || exchangeName;
+		// negative delays break things
+		var delay = Math.max(publishOptions.delay, 1);
 
 		return new Promise(function(resolve, reject) {
 			var queueName = 'delay_' + exchangeName  +'_by_'+publishOptions.delay+'__'+publishOptions.key;
@@ -112,7 +114,7 @@ function Exchange(params){
 				arguments: {
 					'x-dead-letter-exchange': exchangeName,
 					'x-dead-letter-routing-key': publishOptions.key,
-					'x-message-ttl': publishOptions.delay,
+					'x-message-ttl': delay,
 				},
 				ready: function() {
 					defaultExchangePublish(msg, { key: queueName })
