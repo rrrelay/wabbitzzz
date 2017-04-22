@@ -74,6 +74,11 @@ function Exchange(params){
 	});
 
 	this.publish = function(msg, publishOptions, cb){
+		// make sure we arent publishing fancy mongoose objects
+		if (msg && _.isFunction(msg.toObject)) {
+			msg = msg.toObject();
+		}
+
 		return getChannel
 			.then(function(chan){
 
@@ -98,6 +103,11 @@ function Exchange(params){
 	};
 
 	this.delayedPublish = function(msg, publishOptions){
+		// make sure we arent publishing fancy mongoose objects
+		if (msg && _.isFunction(msg.toObject)) {
+			msg = msg.toObject();
+		}
+
 		publishOptions = _.extend({}, DELAYED_PUBLISH_DEFAULTS, publishOptions);
 
 		msg._exchange = msg._exchange || exchangeName;
