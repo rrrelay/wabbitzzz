@@ -23,7 +23,7 @@ var DELAYED_PUBLISH_DEFAULTS = {
 	key: '',
 };
 
-function _createChannel(params, confirmMode){
+function _createChannel(confirmMode){
 	return getConnection()
 		.then(function(conn) {
 			if (confirmMode){
@@ -31,22 +31,25 @@ function _createChannel(params, confirmMode){
 			}
 
 			return conn.createChannel();
-		})
-		.then(function(chan){
-			// if using the default exchange,
-			// then skip the assert
-			if (!params.name) return chan;
-
-			const opt = _.cloneDeep(params);
-			delete opt.name;
-			delete opt.type;
-
-			return chan.assertExchange(params.name, params.type, opt)
-				.then(function(){
-					return chan;
-				});
 		});
 }
+
+function _assertExchange(channel, params) {
+	// if using the default exchange,
+	// then skip the assert
+	if (!params.name) return channel;
+
+	var opt = _.cloneDeep(params);
+	delete opt.name;
+	delete opt.type;
+
+	return channel.assertExchange(params.name, params.type, opt)
+		.then(function() {
+			return channel;
+		});
+}
+
+var mainChannel = _createChannel();
 
 function Exchange(params){
 	var self = this;
@@ -57,7 +60,16 @@ function Exchange(params){
 	delete params.confirm;
 
 	var exchangeName = params.name || '';
-	var getChannel = _createChannel(params, confirmMode);
+	var getChannel;
+	if (confirmMode) {
+		getChannel = _createChannel(true);
+	} else {
+		getChannel = mainChannel;
+	}
+
+	getChannel = getChannel
+		.then(function(c) { return _assertExchange(c, params); });
+
 	var property = Object.defineProperty.bind(Object, self);
 
 	getChannel
