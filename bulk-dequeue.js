@@ -28,28 +28,28 @@ function bulkDequeue(opt, cb){
 	var deliveries = [];
 	var pending = false;
 
-	var done = _.debounce(function(){
-		if (pending) return done();
+	function _getMessages(chan) {
+		var done = _.debounce(function() {
+			if (pending) return done();
 
-		var myDeliveries = deliveries;
-		var myMessages = _.map(myDeliveries, 'message');
+			var myDeliveries = deliveries;
+			var myMessages = _.map(myDeliveries, 'message');
 
-		pending = true;
-		deliveries = [];
+			pending = true;
+			deliveries = [];
 
-		cb(myMessages, function(err){
-			if (err){
-				console.log('error: ' + queueName);
-				return console.error(err);
-			}
+			cb(myMessages, function(err){
+				pending = false;
 
-			myDeliveries.forEach(function(d){ d.ack(); });
-			pending = false;
-		});
+				if (err) {
+					chan.nackAll();
+				} else {
+					chan.ackAll();
+				}
+			});
 
-	}, delay, { maxWait: maxDelay });
+		}, delay, { maxWait: maxDelay });
 
-	function _getMessages(chan){
 		return chan.consume(queueName, function (message) {
 			if (!message) return false;
 
