@@ -3,6 +3,7 @@ var Promise = require('bluebird');
 var ezuuid = require('ezuuid');
 var getConnection = require('./get-connection');
 var ONE_SECOND = 1000;
+var Queue = require('./queue');
 
 var DEFAULTS = {
 	delay: 5 * ONE_SECOND,
@@ -18,38 +19,33 @@ function bulkDequeue(opt, cb){
 	var delay = options.delay;
 	var maxDelay = options.maxDelay;
 	var queueName = options.name || ezuuid();
-	var exchangeNames = _.chain(options.exchangeName)
-		.toArray()
-		.concat(options.exchangeNames)
-		.filter(Boolean)
-		.value();
-
+	options.name = queueName;
 
 	var deliveries = [];
 	var pending = false;
 
-	var done = _.debounce(function(){
-		if (pending) return done();
+	function _getMessages(chan) {
+		var done = _.debounce(function() {
+			if (pending) return done();
 
-		var myDeliveries = deliveries;
-		var myMessages = _.map(myDeliveries, 'message');
+			var myDeliveries = deliveries;
+			var myMessages = _.map(myDeliveries, 'message');
 
-		pending = true;
-		deliveries = [];
+			pending = true;
+			deliveries = [];
 
-		cb(myMessages, function(err){
-			if (err){
-				console.log('error: ' + queueName);
-				return console.error(err);
-			}
+			cb(myMessages, function(err){
+				pending = false;
 
-			myDeliveries.forEach(function(d){ d.ack(); });
-			pending = false;
-		});
+				if (err) {
+					chan.nackAll(false);
+				} else {
+					chan.ackAll();
+				}
+			});
 
-	}, delay, { maxWait: maxDelay });
+		}, delay, { maxWait: maxDelay });
 
-	function _getMessages(chan){
 		return chan.consume(queueName, function (message) {
 			if (!message) return false;
 
@@ -64,48 +60,44 @@ function bulkDequeue(opt, cb){
 		.then(_.constant(chan));
 	}
 
-	function _getQueue(connection){
-		return Promise.resolve(connection.createChannel())
-			.then(function(chan){
-				chan.on('error', function(err){
-					console.error('error with bulk-dequeue', err);
-				});
-
-				return chan.assertQueue(queueName, options)
-					.then(_.constant(chan));
-			})
-			.then(function(chan){
-				// this means give me all the messages
-				return chan.prefetch(0)
-					.then(_.constant(chan));
-			})
-			.then(function(chan){
-				return _.chain(exchangeNames)
-					.toArray()
-					.map(function(exchangeName){
-						return chan.bindQueue(queueName, exchangeName, options.key);
-					})
-					.thru(Promise.all)
-					.value()
-					.then(_.constant(chan));
-			})
-			.then(function(chan){
-				if (_.isFunction(options.ready)){
-					options.ready();
+	function _getQueue(){
+		return new Promise((resolve, reject) => {
+			var oldReady = options.ready;
+			options.ready = function(err) {
+				if (err) {
+					reject(err);
+				} else {
+					resolve(true);
 				}
+				// no need to keep this channel open after the queue
+				// has been created
+				q.close();
 
-				return chan;
-			});
+				if (_.isFunction(oldReady)){
+					oldReady();
+				}
+			};
+
+			if (options.useErrorQueue) {
+				options.arguments = _.assign({}, options.arguments, {
+					'x-dead-letter-exchange': '',
+					'x-dead-letter-routing-key': queueName + '_error',
+				});
+			}
+
+			var q = new Queue(options);
+		});
 	}
 
-	return getConnection()
-		.then(_getQueue)
+	return _getQueue()
+		.then(() => getConnection())
+		.then(conn => conn.createChannel())
 		.then(_getMessages)
 		.then(function(chan){
 			return {
 				destory: chan.deleteQueue.bind(chan, queueName),
 			};
-		});
+		})
 }
 
 module.exports = bulkDequeue;
