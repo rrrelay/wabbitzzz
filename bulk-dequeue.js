@@ -38,7 +38,7 @@ function bulkDequeue(opt, cb){
 				pending = false;
 
 				if (err) {
-					chan.nackAll();
+					chan.nackAll(false);
 				} else {
 					chan.ackAll();
 				}
@@ -77,8 +77,16 @@ function bulkDequeue(opt, cb){
 					oldReady();
 				}
 			};
+
+			if (options.useErrorQueue) {
+				options.arguments = _.assign({}, options.arguments, {
+					'x-dead-letter-exchange': '',
+					'x-dead-letter-routing-key': queueName + '_error',
+				});
+			}
+
 			var q = new Queue(options);
-		})
+		});
 	}
 
 	return _getQueue()
