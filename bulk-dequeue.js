@@ -52,7 +52,6 @@ function bulkDequeue(opt, cb){
 			var msg = JSON.parse(message.content);
 			deliveries.push({
 				message: msg,
-				ack: chan.ack.bind(chan, message),
 			});
 
 			done();
