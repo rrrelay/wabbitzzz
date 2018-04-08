@@ -7,6 +7,7 @@ var getResponse = require('./get/response');
 var getRequest = require('./get/request');
 
 var bulkDequeue = require('./bulk-dequeue');
+var rpc = require('./rpc');
 
 module.exports = {
 	Exchange: Exchange,
@@ -18,4 +19,5 @@ module.exports = {
 		response: getResponse,
 	},
 	bulkDequeue: bulkDequeue,
+	rpc: rpc,
 };
