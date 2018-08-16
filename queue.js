@@ -51,7 +51,8 @@ function Queue(params){
 		errorQueueName = name + '_error',
 		prefetchCount = params.prefetchCount|| 1,
 		ctag,
-		noAck = getNoAckParam(params);
+		noAck = getNoAckParam(params),
+		attempts = params.attempts;
 
 	if (noAck){
 		prefetchCount = 0;
@@ -191,8 +192,19 @@ function Queue(params){
 							return chan.ack(msg);
 						}
 
-						if (useErrorQueue) {
-							myMessage._error = _.extend({}, {message: error.message, stack: error.stack}, error);
+						myMessage._error = _.extend({}, {message: error.message, stack: error.stack}, error);
+
+						if (attempts && error && /^retry$/i.test(error)) {
+							myMessage._attempt = myMessage._attempt || 0;
+							myMessage._attempt += 1;
+
+							defaultExchangePublish(myMessage, { delay: 250, key: name })
+								.then(function(){
+									return chan.ack(msg);
+								})
+
+
+						} else if (useErrorQueue) {
 							var options = {
 								key: errorQueueName,
 								persistent: true,

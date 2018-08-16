@@ -1,3 +1,5 @@
+/* eslint-env mocha */
+
 var Queue = require('./queue'),
 	Promise = require('bluebird'),
 	_ = require('lodash'),
@@ -370,6 +372,49 @@ describe('queue', function(){
 			}
 
 			expect(true).to.be.false;
+		});
+	});
+
+	it('should retry messages when attempts is set', function(done){
+		this.timeout(25000);
+		var content1 = { id: ezuuid() };
+
+		var exchangeName1 = 'my_exchange_to_retry';
+		var exchange1 = new Exchange({ name: exchangeName1, type: 'topic', confirm: true });
+
+		var queue = new Queue({
+			autoDelete: true,
+			exclusive: true,
+			attempts: 3,
+			bindings: [
+				{ name: exchangeName1, type: 'topic', key: '#' },
+			],
+			ready: function(){
+				exchange1.publish(content1);
+			},
+		});
+
+		var myAttemptCount = 0;
+
+		queue(function(msg, ack){
+			console.dir(msg._attempt);
+			expect(msg.id).to.be.equal(content1.id);
+			if (myAttemptCount === 0) {
+				expect(msg._attempt).to.be.not.ok;
+				myAttemptCount++;
+			} else {
+				expect(myAttemptCount++).to.be.equal(msg._attempt);
+			}
+
+
+			if (msg._attempt === 2) {
+				// we did it!
+				ack();
+				return done();
+			}
+
+			console.log('gonna retry the message!', msg._attempt);
+			ack('retry');
 		});
 	});
 });
