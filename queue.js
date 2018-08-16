@@ -51,7 +51,8 @@ function Queue(params){
 		errorQueueName = name + '_error',
 		prefetchCount = params.prefetchCount|| 1,
 		ctag,
-		noAck = getNoAckParam(params);
+		noAck = getNoAckParam(params),
+		attempts = params.attempts;
 
 	if (noAck){
 		prefetchCount = 0;
@@ -85,14 +86,6 @@ function Queue(params){
 	delete params.key;
 	delete params.noAck;
 	delete params.ack;
-
-	function bindingHasExchangeAttributes(binding){
-		return !_.chain(binding)
-			.keys()
-			.intersection(EXCHANGE_ATTRIBUTE_NAMES)
-			.isEmpty()
-			.value();
-	}
 
 	function bindQueue(chan, bindings){
 		return _.chain(bindings)
@@ -187,12 +180,44 @@ function Queue(params){
 
 						doneCalled = true;
 
-						if (!error){
+						if (!error) {
 							return chan.ack(msg);
 						}
 
-						if (useErrorQueue) {
-							myMessage._error = _.extend({}, {message: error.message, stack: error.stack}, error);
+						myMessage._error = _.extend({}, {message: error.message, stack: error.stack}, error);
+
+						var pushToRetryQueue = false;
+						var retryDelay = 250;
+
+						try {
+							if (attempts && /^retry$/i.test(error)) {
+								myMessage._attempt = myMessage._attempt || 0;
+
+								var maxAttempts;
+
+								if (_.isArray(attempts)) {
+									maxAttempts = _.size(attempts) + 1;
+									retryDelay = attempts[myMessage._attempt];
+								} else {
+									maxAttempts = +attempts || 2;
+								}
+
+								myMessage._attempt += 1;
+
+								if (myMessage._attempt < maxAttempts) {
+									pushToRetryQueue = true;
+								}
+							}
+						} catch (err) {
+							console.error(err);
+						}
+
+						if (pushToRetryQueue) {
+							defaultExchangePublish(myMessage, { delay: retryDelay, key: name })
+								.then(function(){
+									return chan.ack(msg);
+								});
+						} else if (useErrorQueue) {
 							var options = {
 								key: errorQueueName,
 								persistent: true,
