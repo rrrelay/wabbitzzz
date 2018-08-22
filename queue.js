@@ -188,7 +188,7 @@ function Queue(params){
 
 						doneCalled = true;
 
-						if (!error){
+						if (!error) {
 							return chan.ack(msg);
 						}
 
@@ -198,16 +198,17 @@ function Queue(params){
 						var retryDelay = 250;
 
 						if (attempts && /^retry$/i.test(error)) {
+							myMessage._attempt = myMessage._attempt || 0;
 
 							var maxAttempts;
 
 							if (_.isArray(attempts)) {
-
+								maxAttempts = _.size(attempts) + 1;
+								retryDelay = attempts[myMessage._attempt];
 							} else {
 								maxAttempts = +attempts || 2;
 							}
 
-							myMessage._attempt = myMessage._attempt || 0;
 							myMessage._attempt += 1;
 
 							if (myMessage._attempt < maxAttempts) {

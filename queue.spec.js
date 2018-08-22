@@ -375,7 +375,7 @@ describe('queue', function(){
 		});
 	});
 
-	describe.only('retries', function() {
+	describe('retries', function() {
 		it('should retry messages when attempts is set', function(done){
 			this.timeout(25000);
 			var content1 = { id: ezuuid() };
@@ -418,12 +418,12 @@ describe('queue', function(){
 			});
 		});
 
-		it.only('should not retry messages more than the # of attempts', function(done) {
+		it('should not retry messages more than the # of attempts', function(done) {
 			this.timeout(25000);
 			var content1 = { id: ezuuid() };
 
 			var queueName = ezuuid();
-			var exchangeName1 = 'my_exchange_to_retry2';
+			var exchangeName1 = 'my_exchange_to_retry3';
 			var exchange1 = new Exchange({ name: exchangeName1, type: 'topic', confirm: true });
 
 			var errorQueue = new Queue({
@@ -467,6 +467,63 @@ describe('queue', function(){
 			errorQueue(function(msg, ack) {
 				expect(msg.id).to.be.equal(content1.id);
 				expect(myAttemptCount).to.be.equal(maxAttempts);
+
+				ack();
+				done();
+			});
+		});
+
+		it('should retry messages when attempts is an array', function(done) {
+			this.timeout(25000);
+			var content1 = { id: ezuuid() };
+
+			var queueName = ezuuid();
+			var exchangeName1 = 'my_exchange_to_retry2';
+			var exchange1 = new Exchange({ name: exchangeName1, type: 'topic', confirm: true });
+
+			var errorQueue = new Queue({
+				name: queueName + '_error',
+				durable: true,
+			});
+
+			var maxAttempts = [1000, 5000, 2000];
+			var queue = new Queue({
+				name: queueName,
+				useErrorQueue: true,
+				autoDelete: true,
+				exclusive: true,
+				attempts: maxAttempts,
+				bindings: [
+					{ name: exchangeName1, type: 'topic', key: '#' },
+				],
+				ready: function() {
+					exchange1.publish(content1);
+				},
+			});
+
+			var myAttemptCount = 0;
+
+			var now = Date.now();
+			queue(function(msg, ack) {
+				var n = Date.now();
+				console.log('processing attempt', msg._attempt || 0, n - now);
+				expect(msg.id).to.be.equal(content1.id);
+
+				if (myAttemptCount === 0) {
+					expect(msg._attempt).to.be.not.ok;
+				} else {
+					expect(myAttemptCount).to.be.equal(msg._attempt);
+				}
+
+				myAttemptCount++;
+
+				expect(myAttemptCount).to.be.below(_.size(maxAttempts) + 1);
+				ack('retry');
+			});
+
+			errorQueue(function(msg, ack) {
+				expect(msg.id).to.be.equal(content1.id);
+				expect(myAttemptCount).to.be.equal(_.size(maxAttempts) + 1);
 
 				ack();
 				done();
