@@ -194,16 +194,32 @@ function Queue(params){
 
 						myMessage._error = _.extend({}, {message: error.message, stack: error.stack}, error);
 
-						if (attempts && error && /^retry$/i.test(error)) {
+						var pushToRetryQueue = false;
+						var retryDelay = 250;
+
+						if (attempts && /^retry$/i.test(error)) {
+
+							var maxAttempts;
+
+							if (_.isArray(attempts)) {
+
+							} else {
+								maxAttempts = +attempts || 2;
+							}
+
 							myMessage._attempt = myMessage._attempt || 0;
 							myMessage._attempt += 1;
 
-							defaultExchangePublish(myMessage, { delay: 250, key: name })
+							if (myMessage._attempt < maxAttempts) {
+								pushToRetryQueue = true;
+							}
+						}
+
+						if (pushToRetryQueue) {
+							defaultExchangePublish(myMessage, { delay: retryDelay, key: name })
 								.then(function(){
 									return chan.ack(msg);
-								})
-
-
+								});
 						} else if (useErrorQueue) {
 							var options = {
 								key: errorQueueName,

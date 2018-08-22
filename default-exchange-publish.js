@@ -33,8 +33,6 @@ function _publish(msg, options){
 				const delayQueueName = `delay_default_${key}_${delay}`;
 				return chan.assertQueue(delayQueueName, queueOptions)
 					.then(() => {
-						console.log('what');
-						console.dir(delayQueueName);
 						return chan.publish('', delayQueueName, Buffer(JSON.stringify(msg)), options);
 					});
 			} else {
