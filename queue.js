@@ -190,7 +190,7 @@ function Queue(params){
 						var retryDelay = 250;
 
 						try {
-							if (attempts && /^retry$/i.test(error)) {
+							if (attempts) {
 								myMessage._attempt = myMessage._attempt || 0;
 
 								var maxAttempts;
