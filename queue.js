@@ -213,7 +213,7 @@ function Queue(params){
 						}
 
 						if (pushToRetryQueue) {
-							defaultExchangePublish(myMessage, { delay: retryDelay, key: name })
+							return defaultExchangePublish(myMessage, { delay: retryDelay, key: name })
 								.then(function(){
 									return chan.ack(msg);
 								});
@@ -223,7 +223,7 @@ function Queue(params){
 								persistent: true,
 							};
 
-							defaultExchangePublish(myMessage, options)
+							return defaultExchangePublish(myMessage, options)
 								.then(function(){
 									return chan.ack(msg);
 								})
@@ -233,11 +233,28 @@ function Queue(params){
 								});
 						} else {
 							console.log('bad ack', error);
+							return chan.nack();
 						}
 					};
 
 					try {
-						fn(myMessage, done);
+						const myDone = (...args) => {
+							// generous timeouts and then restart the whole thing.
+							// TODO: try to reconnect instead of exiting
+							Promise.resolve(done.apply(null, args))
+								.timeout(60000)
+								.catch(err => {
+									console.error('our ack failed', err);
+									return chan.nack(msg)
+										.timeout(60000)
+										.catch(err => {
+											console.error('our ack failed, then our nack failed', err);
+											process.exit(1);
+										});
+								});
+						};
+
+						fn(myMessage, myDone);
 					} catch (e){
 						if (!doneCalled){
 							done(e.toString());
