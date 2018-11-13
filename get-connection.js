@@ -13,7 +13,11 @@ function _getConnection(){
 			}
 
 			process.once('SIGINT', close);
-//			process.once('SIGTERM', close);
+			conn.on('close', closeData => {
+				console.log('WABBITZZZ CONNECTION CLOSED', closeData);
+				process.exit(1);
+			});
+
 			return conn;
 		})
 		.catch(function(err){
