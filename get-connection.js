@@ -13,6 +13,8 @@ function _log(...args) {
 function _getConnection(){
 	return Promise.resolve(amqplib.connect(CONN_STRING))
 		.then(function(conn) {
+			_log('WABBITZZZ CONNECTION OPENED');
+
 			var closed = false;
 			function close(){
 				if (closed){
