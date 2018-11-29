@@ -291,7 +291,7 @@ describe('queue', function(){
 
 	it('should be able to add bindings on the fly', function(done){
 		var content = { now: Date.now() };
-		var content2 = { now: Date.now() + '_hello' };
+		var content2 = { now: Date.now() + '_hello1' };
 
 		var exchangeName = 'my_bootleg_exchange';
 		var ex = new Exchange({ name: exchangeName, type: 'topic' });
@@ -330,7 +330,7 @@ describe('queue', function(){
 
 	it('should be able to remove bindings on the fly', function(done){
 		var content1 = { now: Date.now() };
-		var content2 = { now: Date.now() + '_hello' };
+		var content2 = { now: Date.now() + '_hello2' };
 		var content3 = { now: Date.now() + '_yah_yah' };
 
 		var exchangeName1 = 'my_bootleg_exchange1';
@@ -528,6 +528,38 @@ describe('queue', function(){
 				ack();
 				done();
 			});
+		});
+	});
+	it('should work with fancy labels', function(done){
+		this.timeout(5000);
+
+		var exchangeName = ezuuid();
+		var message = ezuuid();
+
+		var exchange1 = new Exchange({name: exchangeName, type: 'topic',  autoDelete: true});
+
+		exchange1.on('ready', function(){
+
+			var queue = new Queue({
+				autoDelete: true,
+				exclusive: true,
+				bindings: [
+					{ name: exchangeName, key: 'mike.*', label: 'one', },
+					{ name: exchangeName, key: 'fred.*' , label: 'two' },
+				],
+				ready: function(){
+					exchange1.publish({key:message}, { key: 'fred.888what' });
+				},
+			});
+
+			queue(function(msg, ack){
+				if (msg.key !== message) return done('got a message I shouldnt have');
+
+				expect(msg._label).to.be.equal('two');
+				ack();
+				done();
+			});
+
 		});
 	});
 });

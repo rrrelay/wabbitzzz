@@ -43,6 +43,19 @@ function getNoAckParam(params){
 	return false;
 }
 
+function _patternToMatcher(pattern) {
+	if (!pattern) return _.constant(false);
+	// https://github.com/mateodelnorte/amqp-match/blob/master/index.js
+	const regexString = '^' + pattern.replace(/\*/g, '([^.]+)').replace(/#/g, '([^.]+.?)+') + '$';
+
+	return function(str) {
+		if (!str) return false;
+		if (str === pattern) return true;
+
+		return str.search(regexString) !== -1;
+	};
+}
+
 function Queue(params){
 	params = _.extend({}, DEFAULTS, params);
 
@@ -54,7 +67,7 @@ function Queue(params){
 		noAck = getNoAckParam(params),
 		attempts = params.attempts;
 
-	if (noAck){
+	if (noAck) {
 		prefetchCount = 0;
 	}
 
@@ -77,6 +90,11 @@ function Queue(params){
 		})
 		.value();
 
+	const labeledBindings = bindings.filter(b => b.label && b.key);
+	labeledBindings
+		.forEach(b => {
+			b.isMatch = _patternToMatcher(b.key);
+		});
 
 	delete params.exchangeName;
 	delete params.exchangeNames;
@@ -169,6 +187,17 @@ function Queue(params){
 							if (msg.properties.replyTo) myMessage._replyTo = msg.properties.replyTo;
 							if (msg.properties.correlationId) myMessage._correlationId = msg.properties.correlationId;
 						}
+
+						if (msg.fields) {
+							myMessage._exchange = msg.fields.exchange;
+
+							const { routingKey } = msg.fields;
+							// there are potentially many matches, but we just use the first one. meh.
+							const matchedBinding = _.find(labeledBindings, b => b.isMatch && b.isMatch(routingKey));
+							if (matchedBinding) {
+								myMessage._label = matchedBinding.label;
+							}
+						}
 					} catch (err){
 						console.error('error deserializing message', err);
 						myMessage = {};
@@ -233,7 +262,7 @@ function Queue(params){
 								});
 						} else {
 							console.log('bad ack', error);
-							return chan.nack();
+							return chan.nack(msg);
 						}
 					};
 
@@ -301,6 +330,11 @@ function Queue(params){
 	receiveFunc.addBinding = function(binding){
 		return queuePromise
 			.then(function(chan){
+				if (binding.label && binding.key) {
+					binding.isMatch = _patternToMatcher(binding.key);
+					labeledBindings.push(binding);
+				}
+
 				return chan.bindQueue(name, binding.name, binding.key);
 			});
 	};
@@ -309,6 +343,13 @@ function Queue(params){
 		return queuePromise
 			.then(function(chan){
 				return chan.unbindQueue(name, binding.name, binding.key);
+			})
+			.then(result => {
+				if (binding.label) {
+					_.pull(labeledBindings, b => b.label == binding.label);
+				}
+
+				return result;
 			});
 	};
 
