@@ -262,7 +262,7 @@ function Queue(params){
 								});
 						} else {
 							console.log('bad ack', error);
-							return chan.nack(msg);
+							return Promise.resolve(false);
 						}
 					};
 
