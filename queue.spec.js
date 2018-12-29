@@ -149,7 +149,7 @@ describe('queue', function(){
 			});
 
 			errorQueue(function(msg, ack){
-				expect(msg._error).to.be.okay;
+				expect(msg._error).to.be.ok;
 				expect(msg._error.message).to.be.equal(errorKey);
 				ack();
 

@@ -189,7 +189,9 @@ function Queue(params){
 						}
 
 						if (msg.fields) {
-							myMessage._exchange = msg.fields.exchange;
+							if (msg.fields.exchange) {
+								myMessage._exchange = msg.fields.exchange;
+							}
 
 							const { routingKey } = msg.fields;
 							// there are potentially many matches, but we just use the first one. meh.
