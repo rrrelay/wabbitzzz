@@ -54,7 +54,7 @@ module.exports = function(){
 	var fn = function(cb){
 
 		queue.ready
-			.timeout(10000)
+			.timeout(80000)
 			.then(function(){
 				queue(function(msg){
 					var done = function(err, res){
