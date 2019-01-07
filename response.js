@@ -78,6 +78,8 @@ module.exports = function(){
 					msg._listenOnly = listenOnly;
 
 					try {
+						// this is not strictly necessary, but helps avoid bugs for the moment
+						delete msg._exchange;
 						cb(null, msg, done);
 					} catch (err){
 						console.log('unhandled error while processing ' + methodName);
