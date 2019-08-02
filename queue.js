@@ -20,6 +20,16 @@ var DEFAULTS = {
 	useErrorQueue: false,
 };
 
+function _log(level, ...args) {
+	const fn = _.get(global.logger, level);
+
+	if (fn) {
+		fn(...args);
+	} else {
+		console.log(`[${level}] ${args}`);
+	}
+}
+
 function assertQueue(queueName, exchangeNames, params){
 	return getConnection()
 		.then(function(conn){
@@ -65,7 +75,9 @@ function Queue(params){
 		prefetchCount = params.prefetchCount|| 1,
 		ctag,
 		noAck = getNoAckParam(params),
-		attempts = params.attempts;
+		attempts = params.attempts,
+		closing = false;
+
 
 	if (noAck) {
 		prefetchCount = 0;
@@ -171,7 +183,15 @@ function Queue(params){
 	var receiveFunc = function(fn){
 		queuePromise
 			.then(function(chan){
-				if (!chan) return false;
+				if (!chan) {
+					_log('warn', `missing channel for queue ${name} not consuming`);
+					return false;
+				}
+
+				if (closing) {
+					_log('warn', `channel for queue ${name} was closed before we could start consuming`, 'HEY');
+					return false;
+				}
 
 				return chan.consume(name, function(msg) {
 					if (!msg){
@@ -179,6 +199,10 @@ function Queue(params){
 						return false;
 					}
 
+					if (closing) {
+						_log('warn', `channel for queue ${name} was closed before we could ACK` );
+						return false;
+					}
 					var myMessage;
 					try {
 						myMessage = JSON.parse(msg.content.toString());
@@ -201,7 +225,7 @@ function Queue(params){
 							}
 						}
 					} catch (err){
-						console.error('error deserializing message', err);
+						_log('error', 'error deserializing message', err);
 						myMessage = {};
 					}
 
@@ -312,26 +336,38 @@ function Queue(params){
 	};
 
 	receiveFunc.close = function(){
+		closing = true;
+
 		return queuePromise
 			.then(function(chan){
-				chan.close();
+				return chan.close();
 			});
 	};
 
 	receiveFunc.destroy = function(){
+		closing = true;
+
 		return queuePromise
 			.then(function(chan){
 				return chan.deleteQueue(name)
-					.then(_.constant(chan));
+					.then(_.constant(chan))
+					.catch(err => {
+						_log(`error`, `unable to delete queue ${name}`, err);
+						return chan;
+					});
 			})
 			.then(function(chan){
-				chan.close();
+				return chan.close();
 			});
 	};
 
 	receiveFunc.addBinding = function(binding){
 		return queuePromise
 			.then(function(chan){
+				if (closing) {
+					return false;
+				}
+
 				if (binding.label && binding.key) {
 					binding.isMatch = _patternToMatcher(binding.key);
 					labeledBindings.push(binding);
