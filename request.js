@@ -66,7 +66,7 @@ module.exports = function(){
 	var options = createOptions.apply(null, _.toArray(arguments));
 	var methodName = options.methodName;
 
-	return function(req, cb){
+	return function(req = {}, cb){
 		var correlationId = ezuuid();
 		var requestEntry = requestLookup[correlationId] = {
 			cb: cb,
