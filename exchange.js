@@ -23,8 +23,8 @@ var DELAYED_PUBLISH_DEFAULTS = {
 	key: '',
 };
 
-function _createChannel(confirmMode){
-	return getConnection()
+function _createChannel(connString, confirmMode){
+	return getConnection(connString)
 		.then(function(conn) {
 			if (confirmMode){
 				return conn.createConfirmChannel();
@@ -49,7 +49,9 @@ function _assertExchange(channel, params) {
 		});
 }
 
-var mainChannel = _createChannel();
+var channelDict = {
+	main: _createChannel(),
+};
 
 function Exchange(params){
 	var self = this;
@@ -62,9 +64,11 @@ function Exchange(params){
 	var exchangeName = params.name || '';
 	var getChannel;
 	if (confirmMode) {
-		getChannel = _createChannel(true);
+		getChannel = _createChannel(self.connString, true);
+	} else if (self.connString) {
+		getChannel = channelDict[self.connString];
 	} else {
-		getChannel = mainChannel;
+		getChannel = channelDict.main;
 	}
 
 	getChannel = getChannel
@@ -156,4 +160,10 @@ function Exchange(params){
 }
 
 util.inherits(Exchange, EventEmitter);
-module.exports = Exchange;
+module.exports = function (opt) {
+	if (opt.connString && !channelDict[opt.connString]) {
+		channelDict[opt.connString] = _createChannel(opt.connString);
+	}
+	Exchange.connString = opt.connString;
+	return Exchange.bind(Exchange);
+};
