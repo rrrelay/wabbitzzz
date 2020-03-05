@@ -1,7 +1,7 @@
 var Promise = require('bluebird'),
 	util = require('util'),
 	getConnection = require('./get-connection'),
-	Queue = require('./queue'),
+	queue = require('./queue'),
 	_ = require('lodash'),
 	EventEmitter = require('events').EventEmitter,
 	defaultExchangePublish = require('./default-exchange-publish');
@@ -23,8 +23,8 @@ var DELAYED_PUBLISH_DEFAULTS = {
 	key: '',
 };
 
-function _createChannel(confirmMode){
-	return getConnection()
+function _createChannel(connString, confirmMode){
+	return getConnection(connString)
 		.then(function(conn) {
 			if (confirmMode){
 				return conn.createConfirmChannel();
@@ -49,9 +49,11 @@ function _assertExchange(channel, params) {
 		});
 }
 
-var mainChannel = _createChannel();
+var channelDict = {
+	main: _createChannel(),
+};
 
-function Exchange(params){
+function Exchange(connString, params){
 	var self = this;
 	EventEmitter.call(self);
 	params = _.extend({}, EXCHANGE_DEFAULTS, params);
@@ -62,9 +64,11 @@ function Exchange(params){
 	var exchangeName = params.name || '';
 	var getChannel;
 	if (confirmMode) {
-		getChannel = _createChannel(true);
+		getChannel = _createChannel(connString, true);
+	} else if (connString) {
+		getChannel = channelDict[connString];
 	} else {
-		getChannel = mainChannel;
+		getChannel = channelDict.main;
 	}
 
 	getChannel = getChannel
@@ -129,7 +133,7 @@ function Exchange(params){
 		return new Promise(function(resolve, reject) {
 			var queueName = 'delay_' + exchangeName  +'_by_'+publishOptions.delay+'__'+publishOptions.key;
 
-			var tmp = new Queue({
+			var tmp = new queue(connString)({
 				name: queueName,
 				exclusive: false,
 				autoDelete: false,
@@ -139,7 +143,7 @@ function Exchange(params){
 					'x-message-ttl': delay,
 				},
 				ready: function() {
-					defaultExchangePublish(msg, { key: queueName })
+					defaultExchangePublish(connString, msg, { key: queueName })
 						.then(function() {
 							resolve(true);
 						})
@@ -156,4 +160,11 @@ function Exchange(params){
 }
 
 util.inherits(Exchange, EventEmitter);
-module.exports = Exchange;
+
+module.exports = function (opt = {}) {
+	if (opt.connString && !channelDict[opt.connString]) {
+		channelDict[opt.connString] = _createChannel(opt.connString);
+	}
+
+	return _.partial(Exchange, opt.connString);
+};

@@ -1,8 +1,8 @@
-var request = require('./request'),
+var request = require('./request')(),
 	Promise  = require('bluebird'),
 	_  = require('lodash'),
-	Queue = require('./queue'),
-	response = require('./response'),
+	Queue = require('./queue')(),
+	response = require('./response')(),
 	ezuuid = require('ezuuid'),
 	expect = require('chai').expect;
 
@@ -76,7 +76,7 @@ describe('rpc', function(){
 
 		request(METHOD_NAME, {timeout:2000})({msg: 'goodbye cruel world'}, function(err, res){
 			if (err) return done();
-		
+
 			done(new Error('there was no error is the error'));
 		});
 	});
@@ -215,4 +215,3 @@ describe('rpc', function(){
 
 	});
 });
-

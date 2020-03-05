@@ -2,32 +2,40 @@ var getConnection = require('./get-connection');
 var ezuuid = require('ezuuid');
 var _ = require('lodash');
 
-var initChannel = getConnection()
-	.then(function(conn) {
-		return conn.createChannel();
-	})
-	.then(function(chan){
-		var options = { noAck: true };
-		return chan.consume('amq.rabbitmq.reply-to', handleResponse, options)
-			.then(function(){
-				return chan.assertExchange('_rpc_send_direct', 'direct', { durable: true });
-			})
-			.then(function(){
-				return chan;
-			});
-	})
-	.catch(function(err){
-		console.log('error initializing channel');
-		console.error(err);
-	});
+function initChannel (connString) {
+	return getConnection(connString)
+		.then(function(conn) {
+			return conn.createChannel();
+		})
+		.then(function(chan){
+			var options = { noAck: true };
+			const myHandler = _.partial(handleResponse, connString);
+			return chan.consume('amq.rabbitmq.reply-to', myHandler, options)
+				.then(function(){
+					return chan.assertExchange('_rpc_send_direct', 'direct', { durable: true });
+				})
+				.then(function(){
+					return chan;
+				});
+		})
+		.catch(function(err){
+			console.log('error initializing channel');
+			console.error(err);
+		});
+}
 
-function handleResponse(response){
+const channelDict = {
+	main: initChannel(),
+}
+
+function handleResponse(connString, response){
 	if (!response || !response.properties || !response.properties.correlationId){
 		return console.dir('error, bad response.', response);
 	}
 
+	var conn = connString ? connString : 'main';
 	var correlationId = response.properties.correlationId;
-	var requestEntry = requestLookup[correlationId];
+	var requestEntry = requestLookup[conn][correlationId];
 
 	if (!requestEntry){
 		return console.dir('error, unknown correlationId.');
@@ -36,7 +44,7 @@ function handleResponse(response){
 	clearTimeout(requestEntry.timeout);
 
 	var msg = JSON.parse(response.content.toString());
-	delete requestLookup[correlationId];
+	delete requestLookup[conn][correlationId];
 
 	if (msg && msg._rpcError) {
 		requestEntry.cb(new Error(msg._message || 'unknown error in rpc server'));
@@ -61,22 +69,29 @@ function createOptions(methodName, options){
 	return options;
 }
 
-var requestLookup = {};
-module.exports = function(){
-	var options = createOptions.apply(null, _.toArray(arguments));
+var requestLookup = {
+	main: {},
+};
+function request (connString){
+	var options = createOptions.apply(null, _.toArray(arguments).slice(1));
 	var methodName = options.methodName;
 
 	return function(req = {}, cb){
+		var conn = connString ? connString : 'main';
 		var correlationId = ezuuid();
-		var requestEntry = requestLookup[correlationId] = {
+		var requestEntry = requestLookup[conn][correlationId] = {
 			cb: cb,
 		};
 
-		return initChannel
+		if (!channelDict[conn]) {
+			channelDict[conn] = initChannel(connString);
+		}
+
+		return channelDict[conn]
 			.then(function(chan){
 				if (!chan){
 					console.error('unable to get initialized channel');
-					delete requestLookup[correlationId];
+					delete requestLookup[conn][correlationId];
 					return cb(new Error('unable to initialize rpc channel'));
 				}
 
@@ -92,7 +107,7 @@ module.exports = function(){
 			})
 			.then(function(){
 				requestEntry.timeout = setTimeout(function(){
-					delete requestLookup[correlationId];
+					delete requestLookup[conn][correlationId];
 					cb(new Error('timeout'));
 				}, options.timeout);
 			})
@@ -102,5 +117,9 @@ module.exports = function(){
 			});
 	};
 };
+
+module.exports = function (opt = {}) {
+	return _.partial(request, opt.connString);
+}
 
 module.exports.createOptions = createOptions;

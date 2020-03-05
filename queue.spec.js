@@ -1,9 +1,9 @@
 /* eslint-env mocha */
 
-var Queue = require('./queue'),
+var Queue = require('./queue')(),
 	Promise = require('bluebird'),
 	_ = require('lodash'),
-	Exchange = require('./exchange'),
+	Exchange = require('./exchange')(),
 	ezuuid = require('ezuuid'),
 	expect = require('chai').expect;
 
@@ -86,9 +86,9 @@ describe('queue', function(){
 					exchangeNames: [exchangeName1, exchangeName2]
 				});
 
-				var gotMessage1 = false, 
+				var gotMessage1 = false,
 					gotMessage2 = false;
-				
+
 				queue(function(msg, ack){
 					if (msg.key === message1) {
 						gotMessage1 = true;
@@ -217,7 +217,7 @@ describe('queue', function(){
 
 				var gotMessage1 = false,
 					gotMessage2 = false;
-				
+
 				queue(function(msg, ack){
 					if (msg.msg === message1) {
 						gotMessage1 = true;
@@ -271,7 +271,7 @@ describe('queue', function(){
 
 		var gotMessage1 = false,
 			gotMessage2 = false;
-		
+
 		queue(function(msg, ack){
 			if (msg.msg === message1) {
 				gotMessage1 = true;

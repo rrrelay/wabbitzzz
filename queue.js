@@ -30,8 +30,8 @@ function _log(level, ...args) {
 	}
 }
 
-function assertQueue(queueName, exchangeNames, params){
-	return getConnection()
+function assertQueue(connString, queueName, exchangeNames, params){
+	return getConnection(connString)
 		.then(function(conn){
 			return conn.createChannel();
 		})
@@ -66,7 +66,7 @@ function _patternToMatcher(pattern) {
 	};
 }
 
-function Queue(params){
+function Queue(connString, params){
 	params = _.extend({}, DEFAULTS, params);
 
 	var name = params.name || ((params.namePrefix || '') + uuid()),
@@ -139,7 +139,7 @@ function Queue(params){
 			.then(_.constant(chan));
 	}
 
-	var queuePromise = assertQueue(name, bindings, params)
+	var queuePromise = assertQueue(connString, name, bindings, params)
 		.then(function(chan){
 			chan.on('error', function(err){
 				console.log('error binding ' + name);
@@ -268,7 +268,7 @@ function Queue(params){
 						}
 
 						if (pushToRetryQueue) {
-							return defaultExchangePublish(myMessage, { delay: retryDelay, key: name })
+							return defaultExchangePublish(connString, myMessage, { delay: retryDelay, key: name })
 								.then(function(){
 									return chan.ack(msg);
 								});
@@ -278,7 +278,7 @@ function Queue(params){
 								persistent: true,
 							};
 
-							return defaultExchangePublish(myMessage, options)
+							return defaultExchangePublish(connString, myMessage, options)
 								.then(function(){
 									return chan.ack(msg);
 								})
@@ -402,5 +402,6 @@ function Queue(params){
 	return receiveFunc;
 }
 
-module.exports = Queue;
-
+module.exports = function (opt = {}) {
+	return _.partial(Queue, opt.connString);
+}
