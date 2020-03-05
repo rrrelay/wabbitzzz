@@ -10,8 +10,8 @@ function _log(...args) {
 	}
 }
 
-function _getConnection(){
-	return Promise.resolve(amqplib.connect(CONN_STRING))
+function _getConnection(connString = CONN_STRING){
+	return Promise.resolve(amqplib.connect(connString))
 		.then(function(conn) {
 			_log('WABBITZZZ CONNECTION OPENED');
 
@@ -54,11 +54,16 @@ function _getConnection(){
 		});
 }
 
-var p;
-module.exports = function(){
-	if (!p) {
-		p = _getConnection();
+var pDict = {};
+module.exports = function(opt){
+
+	var k = opt.connString;
+	if (k && !pDict[k]) {
+		pDict[k] = _getConnection(k);
+		return pDict[k]
+	} else if (!k && !pDict.main) {
+		pDict.main = _getConnection();
 	}
 
-	return p;
+	return pDict.main;
 };

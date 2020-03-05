@@ -62,45 +62,47 @@ function createOptions(methodName, options){
 }
 
 var requestLookup = {};
-module.exports = function(){
-	var options = createOptions.apply(null, _.toArray(arguments));
-	var methodName = options.methodName;
+module.exports = function(opt){
+	return function() {
+		var options = createOptions.apply(null, _.toArray(arguments));
+		var methodName = options.methodName;
 
-	return function(req = {}, cb){
-		var correlationId = ezuuid();
-		var requestEntry = requestLookup[correlationId] = {
-			cb: cb,
+		return function(req = {}, cb){
+			var correlationId = ezuuid();
+			var requestEntry = requestLookup[correlationId] = {
+				cb: cb,
+			};
+
+			return initChannel
+				.then(function(chan){
+					if (!chan){
+						console.error('unable to get initialized channel');
+						delete requestLookup[correlationId];
+						return cb(new Error('unable to initialize rpc channel'));
+					}
+
+					var options = {
+						key: methodName,
+						correlationId: correlationId,
+						persistent: false,
+						replyTo: 'amq.rabbitmq.reply-to',
+						contentType: 'application/json',
+					};
+
+					return chan.publish('_rpc_send_direct', methodName, new Buffer(JSON.stringify(req)), options);
+				})
+				.then(function(){
+					requestEntry.timeout = setTimeout(function(){
+						delete requestLookup[correlationId];
+						cb(new Error('timeout'));
+					}, options.timeout);
+				})
+				.catch(function(err){
+					console.log('error sending request: ', methodName);
+					console.error(err);
+				});
 		};
-
-		return initChannel
-			.then(function(chan){
-				if (!chan){
-					console.error('unable to get initialized channel');
-					delete requestLookup[correlationId];
-					return cb(new Error('unable to initialize rpc channel'));
-				}
-
-				var options = {
-					key: methodName,
-					correlationId: correlationId,
-					persistent: false,
-					replyTo: 'amq.rabbitmq.reply-to',
-					contentType: 'application/json',
-				};
-
-				return chan.publish('_rpc_send_direct', methodName, new Buffer(JSON.stringify(req)), options);
-			})
-			.then(function(){
-				requestEntry.timeout = setTimeout(function(){
-					delete requestLookup[correlationId];
-					cb(new Error('timeout'));
-				}, options.timeout);
-			})
-			.catch(function(err){
-				console.log('error sending request: ', methodName);
-				console.error(err);
-			});
-	};
+	}
 };
 
 module.exports.createOptions = createOptions;

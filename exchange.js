@@ -23,8 +23,8 @@ var DELAYED_PUBLISH_DEFAULTS = {
 	key: '',
 };
 
-function _createChannel(confirmMode){
-	return getConnection()
+function _createChannel(connString, confirmMode){
+	return getConnection(connString)
 		.then(function(conn) {
 			if (confirmMode){
 				return conn.createConfirmChannel();
@@ -49,30 +49,40 @@ function _assertExchange(channel, params) {
 		});
 }
 
-var mainChannel = _createChannel();
+var channelDict = {
+	main: _createChannel(),
+};
 
-function Exchange(params){
-	var self = this;
-	EventEmitter.call(self);
-	params = _.extend({}, EXCHANGE_DEFAULTS, params);
-
-	var confirmMode = !!params.confirm;
-	delete params.confirm;
-
-	var exchangeName = params.name || '';
-	var getChannel;
-	if (confirmMode) {
-		getChannel = _createChannel(true);
-	} else {
-		getChannel = mainChannel;
+module.exports = function (opt) {
+	var connString = opt.connString;
+	if (connString && !channelDict[connString]) {
+		channelDict[connString] = _createChannel(connString);
 	}
+	function Exchange(params){
+		var self = this;
+		EventEmitter.call(self);
+		params = _.extend({}, EXCHANGE_DEFAULTS, params);
 
-	getChannel = getChannel
+		var confirmMode = !!params.confirm;
+		delete params.confirm;
+
+		var exchangeName = params.name || '';
+		var getChannel;
+		if (confirmMode) {
+			getChannel = _createChannel(connString, true);
+		}
+		else if (connString) {
+			getChannel = channelDict[connString];
+		} else {
+			getChannel = channelDict.main;
+		}
+
+		getChannel = getChannel
 		.then(function(c) { return _assertExchange(c, params); });
 
-	var property = Object.defineProperty.bind(Object, self);
+		var property = Object.defineProperty.bind(Object, self);
 
-	getChannel
+		getChannel
 		.then(function(){
 			self.emit('ready');
 		})
@@ -81,17 +91,17 @@ function Exchange(params){
 			console.log(err);
 		});
 
-	property('ready', {
-		get: function(){ return getChannel; }
-	});
+		property('ready', {
+			get: function(){ return getChannel; }
+		});
 
-	this.publish = function(msg, publishOptions, cb){
-		// make sure we arent publishing fancy mongoose objects
-		if (msg && _.isFunction(msg.toObject)) {
-			msg = msg.toObject();
-		}
+		this.publish = function(msg, publishOptions, cb){
+			// make sure we arent publishing fancy mongoose objects
+			if (msg && _.isFunction(msg.toObject)) {
+				msg = msg.toObject();
+			}
 
-		return getChannel
+			return getChannel
 			.then(function(chan){
 
 				var options = _.extend({}, PUBLISH_DEFAULTS, publishOptions);
@@ -104,42 +114,42 @@ function Exchange(params){
 				if (confirmMode){
 					chan.publish(exchangeName, key, Buffer(JSON.stringify(msg)), options);
 					return chan.waitForConfirms()
-						.then(function(){
-							if (_.isFunction(cb)) cb();
-							return true;
-						});
+					.then(function(){
+						if (_.isFunction(cb)) cb();
+						return true;
+					});
 				}
 
 				return chan.publish(exchangeName, key, Buffer(JSON.stringify(msg)), options);
 			});
-	};
+		};
 
-	this.delayedPublish = function(msg, publishOptions){
-		// make sure we arent publishing fancy mongoose objects
-		if (msg && _.isFunction(msg.toObject)) {
-			msg = msg.toObject();
-		}
+		this.delayedPublish = function(msg, publishOptions){
+			// make sure we arent publishing fancy mongoose objects
+			if (msg && _.isFunction(msg.toObject)) {
+				msg = msg.toObject();
+			}
 
-		publishOptions = _.extend({}, DELAYED_PUBLISH_DEFAULTS, publishOptions);
+			publishOptions = _.extend({}, DELAYED_PUBLISH_DEFAULTS, publishOptions);
 
-		msg._exchange = msg._exchange || exchangeName;
-		// negative delays break things
-		var delay = Math.max(publishOptions.delay, 1);
+			msg._exchange = msg._exchange || exchangeName;
+			// negative delays break things
+			var delay = Math.max(publishOptions.delay, 1);
 
-		return new Promise(function(resolve, reject) {
-			var queueName = 'delay_' + exchangeName  +'_by_'+publishOptions.delay+'__'+publishOptions.key;
+			return new Promise(function(resolve, reject) {
+				var queueName = 'delay_' + exchangeName  +'_by_'+publishOptions.delay+'__'+publishOptions.key;
 
-			var tmp = new Queue({
-				name: queueName,
-				exclusive: false,
-				autoDelete: false,
-				arguments: {
-					'x-dead-letter-exchange': exchangeName,
-					'x-dead-letter-routing-key': publishOptions.key,
-					'x-message-ttl': delay,
-				},
-				ready: function() {
-					defaultExchangePublish(msg, { key: queueName })
+				var tmp = new Queue({
+					name: queueName,
+					exclusive: false,
+					autoDelete: false,
+					arguments: {
+						'x-dead-letter-exchange': exchangeName,
+						'x-dead-letter-routing-key': publishOptions.key,
+						'x-message-ttl': delay,
+					},
+					ready: function() {
+						defaultExchangePublish(msg, { key: queueName })
 						.then(function() {
 							resolve(true);
 						})
@@ -149,11 +159,13 @@ function Exchange(params){
 						.finally(function(){
 							tmp.close();
 						});
-				},
+					},
+				});
 			});
-		});
-	};
-}
+		};
+	}
 
-util.inherits(Exchange, EventEmitter);
-module.exports = Exchange;
+	util.inherits(Exchange, EventEmitter);
+
+	return Exchange;
+};

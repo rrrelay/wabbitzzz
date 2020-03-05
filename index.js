@@ -1,23 +1,16 @@
-var Exchange = require('./exchange');
-var Queue = require('./queue');
+var exchange = require('./exchange');
+var queue = require('./queue');
 var request = require('./request');
 var response = require('./response');
-
-var getResponse = require('./get/response');
-var getRequest = require('./get/request');
-
-var bulkDequeue = require('./bulk-dequeue');
 var rpc = require('./rpc');
 
-module.exports = {
-	Exchange: Exchange,
-	Queue: Queue,
-	request: request,
-	response: response,
-	get: {
-		request: getRequest,
-		response: getResponse,
-	},
-	bulkDequeue: bulkDequeue,
-	rpc: rpc,
+module.exports = function (opt) {
+	if (!opt) opt = {};
+	return {
+		Exchange: exchange(opt),
+		Queue: queue(opt),
+		request: request,
+		response: response(opt),
+		rpc: rpc,
+	};
 };
