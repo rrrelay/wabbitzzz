@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "mocha rpc.spec.js get/get.spec.js queue.spec.js exchange.spec.js bulk-dequeue.spec.js",
+    "test": "mocha rpc.spec.js queue.spec.js exchange.spec.js",
     "testing": "nodemon mocha queue.spec.js"
   },
   "author": "",

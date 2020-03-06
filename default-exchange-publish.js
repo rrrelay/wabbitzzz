@@ -6,13 +6,23 @@ var PUBLISH_DEFAULTS = {
 	contentType: 'application/json',
 };
 
-var channel = getConnection()
-	.then(function(conn){
-		return conn.createConfirmChannel();
-	});
+var channelDict = {
+	main: getChannel(),
+};
 
-function _publish(msg, options){
-	return channel
+function getChannel (connString) {
+	return getConnection(connString)
+		.then(function(conn){
+			return conn.createConfirmChannel();
+		});
+}
+
+function _publish(connString, msg, options){
+	const conn = connString ? connString : 'main';
+	if (!channelDict[conn]) {
+		channelDict[conn] = getChannel(connString);
+	}
+	return channelDict[conn]
 		.then(function(chan){
 			var key = options.key;
 			var delay = options.delay;
@@ -45,6 +55,5 @@ function _publish(msg, options){
 		})
 		.timeout(20 * 1000);
 }
-
 
 module.exports = _publish;

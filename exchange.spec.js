@@ -1,5 +1,5 @@
-var Queue = require('./queue'),
-	Exchange = require('./exchange'),
+var Queue = require('./queue')(),
+	Exchange = require('./exchange')(),
 	ezuuid = require('ezuuid');
 
 describe('exchange', function(){
@@ -17,7 +17,7 @@ describe('exchange', function(){
 				name: queueName,
 				ready: function(){
 					defaultExchanage.publish(
-							{message:message}, 
+							{message:message},
 							{key:queueName}
 						);
 				}
@@ -205,7 +205,7 @@ describe('exchange', function(){
 		var message = ezuuid(),
 			exchangeName = ezuuid(),
 			exchange = new Exchange({
-				name: exchangeName, 
+				name: exchangeName,
 				autoDelete: true,
 				confirm:true
 			});
@@ -246,7 +246,7 @@ describe('exchange', function(){
 		var message = ezuuid(),
 			exchangeName = ezuuid(),
 			exchange = new Exchange({
-				name: exchangeName, 
+				name: exchangeName,
 				autoDelete: true,
 				confirm:true
 			});

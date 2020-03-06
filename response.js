@@ -1,5 +1,5 @@
-var Exchange = require('./exchange'),
-	Queue = require('./queue'),
+var exchange = require('./exchange'),
+	_queue = require('./queue'),
 	ezuuid = require('ezuuid'),
 	_ = require('lodash');
 
@@ -22,20 +22,23 @@ function createOptions(methodName, options){
 
 	options = _.extend({}, DEFAULTS, options);
 
-	if (options.appName && !/_$/.test(options.appName)) 
+	if (options.appName && !/_$/.test(options.appName))
 		options.appName += '_';
 
 
 	return options;
 }
+const MainExchange = exchange();
+var defaultExchangeDict = {
+	main: new MainExchange(),
+};
 
-var defaultExchange = new Exchange();
-
-module.exports = function(){
-	var options = createOptions.apply(null, _.toArray(arguments)),
+function response (connString){
+	var options = createOptions.apply(null, _.toArray(arguments).slice(1)),
 		key = ezuuid(),
 		methodName = options.methodName,
 		queueName = options.appName + methodName + (options.shared ? '' : ('_' + key)) + '_rpc', // trailing _rpc important for policy regex
+		Queue = _queue({ connString }),
 		queue = new Queue({
 			name: queueName,
 			ack: false,
@@ -65,13 +68,14 @@ module.exports = function(){
 						};
 
 						if (!listenOnly){
+							const conn = connString ? connString : 'main';
 							if (err){
-								return defaultExchange.publish({
+								return defaultExchangeDict[conn].publish({
 									_rpcError:true,
 									_message: err.toString(),
 								}, publishOptions);
 							} else {
-								return defaultExchange.publish(res, publishOptions);
+								return defaultExchangeDict[conn].publish(res, publishOptions);
 							}
 						}
 					};
@@ -101,4 +105,12 @@ module.exports = function(){
 
 	return fn;
 };
+
+module.exports = function (opt = {}) {
+	if (opt.connString && !defaultExchangeDict[opt.connString]) {
+		const AltExchange = exchange(opt);
+		defaultExchangeDict[opt.connString] = new AltExchange();
+	}
+	return _.partial(response, opt.connString)
+}
 module.exports.createOptions = createOptions;
