@@ -21,3 +21,4 @@ wabbitzzz.response = response();
 wabbitzzz.rpc = rpc();
 
 module.exports = wabbitzzz;
+
