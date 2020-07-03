@@ -11,7 +11,6 @@ function _log(...args) {
 }
 
 function _getConnection(connString = CONN_STRING){
-	console.log(`connString`, connString)
 	return Promise.resolve(amqplib.connect(connString))
 		.then(function(conn) {
 			_log('WABBITZZZ CONNECTION OPENED');
