@@ -219,7 +219,12 @@ function Queue(connString, params){
 
 							const { routingKey } = msg.fields;
 							// there are potentially many matches, but we just use the first one. meh.
-							const matchedBinding = _.find(labeledBindings, b => b.isMatch && b.isMatch(routingKey));
+							const matchedBinding = _.find(labeledBindings, b => {
+								// it is possible to apply the wrong label to a message if
+								// we do not specify the exchange
+								const isRightExchange = b.name === myMessage._exchange;
+								return b.isMatch && b.isMatch(routingKey) && isRightExchange;
+							});
 							if (matchedBinding) {
 								myMessage._label = matchedBinding.label;
 							}
