@@ -7,7 +7,6 @@ var Queue = require('./queue')(),
 	ezuuid = require('ezuuid'),
 	expect = require('chai').expect;
 
-
 describe('queue', function(){
 	it('should be able to bind to a single exchange', function(done){
 		this.timeout(5000);
@@ -560,6 +559,59 @@ describe('queue', function(){
 				done();
 			});
 
+		});
+
+	});
+	it('should not apply the wrong label', function (done) {
+		this.timeout(5000);
+
+		const exchange1Name = ezuuid();
+		const exchange2Name = ezuuid();
+		
+		const exchange1 = new Exchange({
+			name: exchange1Name,
+			type: 'topic',
+		});
+
+		const exchange2 = new Exchange({
+			name: exchange2Name,
+			type: 'fanout',
+		});
+
+		const queue = new Queue({
+			autoDelete: true,
+			exclusive: true,
+			bindings: [
+				{
+					name: exchange1Name,
+					type: 'topic',
+					key: '#',
+					label: 'freaky_deaky',
+				},
+				{
+					name: exchange2Name,
+					type: 'fanout',
+				}
+			],
+			ready: function () {
+				exchange2.publish({ bananas: true });
+			},
+		});
+
+		exchange1.on('ready', function () {
+			exchange2.on('ready', function () {
+
+				queue(function (msg, ack) {
+					if (msg._exchange !== exchange2Name) {
+						return done('something is messed up');
+					}
+
+					expect(msg._label).to.not.be.ok;
+					ack();
+					done();
+				});
+
+			});
 		});
 	});
 });
