@@ -311,6 +311,7 @@ describe('queue', function(){
 		queue(function(msg, ack){
 			if (messageCount > 0){
 				expect(msg.now).to.be.equal(content2.now);
+				expect(msg._routingKey).to.be.equal('1111');
 				ack();
 				done();
 			}
