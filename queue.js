@@ -213,11 +213,13 @@ function Queue(connString, params){
 						}
 
 						if (msg.fields) {
+							const { routingKey } = msg.fields;
+
 							if (msg.fields.exchange) {
 								myMessage._exchange = msg.fields.exchange;
+								myMessage._routingKey = routingKey;
 							}
 
-							const { routingKey } = msg.fields;
 							// there are potentially many matches, but we just use the first one. meh.
 							const matchedBinding = _.find(labeledBindings, b => {
 								// it is possible to apply the wrong label to a message if
