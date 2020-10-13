@@ -1,6 +1,6 @@
 var Promise = require('bluebird'),
 	util = require('util'),
-	getConnection = require('./get-connection'),
+	getConnection = require('./connection').getConnection,
 	queue = require('./queue'),
 	_ = require('lodash'),
 	EventEmitter = require('events').EventEmitter,

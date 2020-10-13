@@ -1,4 +1,4 @@
-var getConnection = require('./get-connection');
+var getConnection = require('./connection').getConnection;
 var ezuuid = require('ezuuid');
 var _ = require('lodash');
 

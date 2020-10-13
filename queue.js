@@ -2,7 +2,7 @@ var uuid = require('ezuuid');
 var _ = require('lodash');
 var defaultExchangePublish = require('./default-exchange-publish');
 var Promise = require('bluebird');
-var getConnection = require('./get-connection');
+var getConnection = require('./connection').getConnection;
 
 var EXCHANGE_ATTRIBUTE_NAMES = [
 	'durable',

@@ -1,5 +1,5 @@
 var _ = require('lodash');
-var getConnection = require('./get-connection');
+var getConnection = require('./connection').getConnection;
 
 var PUBLISH_DEFAULTS = {
 	persistent: false,
