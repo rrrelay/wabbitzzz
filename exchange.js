@@ -1,6 +1,6 @@
 var Promise = require('bluebird'),
 	util = require('util'),
-	getConnection = require('./connection').getConnection,
+	Connection = require('./connection'),
 	queue = require('./queue'),
 	_ = require('lodash'),
 	EventEmitter = require('events').EventEmitter,
@@ -24,7 +24,7 @@ var DELAYED_PUBLISH_DEFAULTS = {
 };
 
 function _createChannel(connString, confirmMode){
-	return getConnection(connString)
+	return Connection.getConnection(connString)
 		.then(function(conn) {
 			if (confirmMode){
 				return conn.createConfirmChannel();

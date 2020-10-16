@@ -11,8 +11,26 @@ function _log(...args) {
 	}
 }
 
-function Connection(connString = CONN_STRING) {
-	return Promise.resolve(amqplib.connect(connString))
+var connectionsDict = {};
+
+function _closeConnection(conn) {
+	var closed = false;
+
+	process.once('SIGINT', () => {
+		if (closed) {
+			_log('close already ran');
+			return;
+		}
+		_log('running close');
+		closed = true;
+		conn.close();
+	});
+
+	return conn;
+}
+
+function _createConnection(connString) {
+  return Promise.resolve(amqplib.connect(connString))
 		.then(function(conn) {
 			_log('WABBITZZZ CONNECTION OPENED');
 
@@ -43,35 +61,26 @@ function Connection(connString = CONN_STRING) {
 		});
 }
 
-function _closeConnection(conn) {
-	var closed = false;
-
-	process.once('SIGINT', () => {
-		if (closed) {
-			_log('close already ran');
-			return;
-		}
-		_log('running close');
-		closed = true;
-		conn.close();
-	});
-
-	return conn;
+function Connection(connString = CONN_STRING) {
+  this.connString = connString;
+  this.connName = connString || 'main';
 }
 
-function _createConnection(fn, connString) {
-	const connName = connString || 'main';
+Connection.prototype.connect = function() {
+  if (!connectionsDict[this.connName]) {
+    connectionsDict[this.connName] = _createConnection(this.connString);
+  }
 
-	if (!connectionsDict[connName]) {
-		connectionsDict[connName] = Connection(connString).then(fn);
-	}
-
-	return connectionsDict[connName];
+  return connectionsDict[this.connName];
 }
 
-var connectionsDict = {};
+Connection.getConnection = function(connString = CONN_STRING) {
+  var conn = new Connection(connString);
 
-module.exports = {
-	Connection: _.partial(_createConnection, (conn) => conn),
-	getConnection: _.partial(_createConnection, _closeConnection),
+  console.log(conn);
+
+  return conn.connect()
+    .then(_closeConnection);
 }
+
+module.exports = Connection;

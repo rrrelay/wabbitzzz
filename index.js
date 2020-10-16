@@ -3,7 +3,7 @@ var queue = require('./queue');
 var request = require('./request');
 var response = require('./response');
 var rpc = require('./rpc');
-var connection = require('./connection').Connection;
+var connection = require('./connection');
 
 function wabbitzzz (opt) {
 	return {
@@ -21,5 +21,6 @@ wabbitzzz.Queue = queue();
 wabbitzzz.request = request();
 wabbitzzz.response = response();
 wabbitzzz.rpc = rpc();
+wabbitzzz.Connection = connection(opt);
 
 module.exports = wabbitzzz;
