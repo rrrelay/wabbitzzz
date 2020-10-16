@@ -30,7 +30,7 @@ function _closeConnection(conn) {
 }
 
 function _createConnection(connString) {
-  return Promise.resolve(amqplib.connect(connString))
+	return Promise.resolve(amqplib.connect(connString))
 		.then(function(conn) {
 			_log('WABBITZZZ CONNECTION OPENED');
 
@@ -62,25 +62,36 @@ function _createConnection(connString) {
 }
 
 function Connection(connString = CONN_STRING) {
-  this.connString = connString;
-  this.connName = connString || 'main';
+	this.connString = connString;
+	this.connName = connString || 'main';
 }
 
 Connection.prototype.connect = function() {
-  if (!connectionsDict[this.connName]) {
-    connectionsDict[this.connName] = _createConnection(this.connString);
-  }
+	if (!connectionsDict[this.connName]) {
+		connectionsDict[this.connName] = _createConnection(this.connString);
+	}
 
-  return connectionsDict[this.connName];
+	return connectionsDict[this.connName];
+}
+
+Connection.prototype.close = function() {
+	return Promise.resolve()
+		.then(() => {
+			var conn = connectionsDict[this.connName];
+			if(conn) {
+				delete connectionsDict[this.connName];
+				return conn.close();
+			};
+		});
 }
 
 Connection.getConnection = function(connString = CONN_STRING) {
-  var conn = new Connection(connString);
+	var conn = new Connection(connString);
 
-  console.log(conn);
+	console.log(conn);
 
-  return conn.connect()
-    .then(_closeConnection);
+	return conn.connect()
+		.then(_closeConnection);
 }
 
 module.exports = Connection;
