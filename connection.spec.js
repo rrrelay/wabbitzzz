@@ -61,9 +61,7 @@ describe('connection', function() {
 					queue(function(msg, ack) {
 						if (msg.message !== message) return done('got a message I shouldnt have');
 						ack();
-						connection.close().then(() => {
-							done();
-						});
+						connection.close().then(done);
 					});
 				});
 		})
@@ -96,12 +94,13 @@ describe('connection', function() {
 						if (msg.message !== message) return done('got a message I shouldnt have');
 						ack();
 
-						connection.close();
-						exchange.publish({message: message})
-							.catch((err) => {
-								console.log(err.name);
-								done();
-							});
+						connection.close().then(() => {
+              exchange.publish({message: message})
+  							.catch((err) => {
+  								console.error(err.name);
+  								done();
+  							});
+            })
 					});
 				});
 		});

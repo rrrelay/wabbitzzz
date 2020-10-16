@@ -71,16 +71,20 @@ Connection.prototype.connect = function() {
 		connectionsDict[this.connName] = _createConnection(this.connString);
 	}
 
-	return connectionsDict[this.connName];
+	return connectionsDict[this.connName]
+		.then(conn => {
+			this.conn = conn;
+			return conn;
+		});
 }
 
 Connection.prototype.close = function() {
 	return Promise.resolve()
 		.then(() => {
-			var conn = connectionsDict[this.connName];
-			if(conn) {
-				delete connectionsDict[this.connName];
-				return conn.close();
+			delete connectionsDict[this.connName];
+
+			if(this.conn) {
+				return this.conn.close();
 			};
 		});
 }
