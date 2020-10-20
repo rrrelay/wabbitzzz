@@ -21,6 +21,6 @@ wabbitzzz.Queue = queue();
 wabbitzzz.request = request();
 wabbitzzz.response = response();
 wabbitzzz.rpc = rpc();
-wabbitzzz.Connection = connection(opt);
+wabbitzzz.Connection = connection();
 
 module.exports = wabbitzzz;

@@ -23,10 +23,10 @@ var DELAYED_PUBLISH_DEFAULTS = {
 	key: '',
 };
 
-function _createChannel(connString, confirmMode){
+function _createChannel(connString, confirmMode) {
 	return Connection.getConnection(connString)
 		.then(function(conn) {
-			if (confirmMode){
+			if (confirmMode) {
 				return conn.createConfirmChannel();
 			}
 
@@ -49,35 +49,45 @@ function _assertExchange(channel, params) {
 		});
 }
 
-var channelDict = {
-	main: _createChannel(),
-};
+var channelDict = {};
 
-function Exchange(connString, params){
+function Exchange(connString, params) {
 	var self = this;
 	EventEmitter.call(self);
 	params = _.extend({}, EXCHANGE_DEFAULTS, params);
 
 	var confirmMode = !!params.confirm;
+	console.log(`confirmMode ${confirmMode} ${JSON.stringify(params)}`);
+
 	delete params.confirm;
 
 	var exchangeName = params.name || '';
+
+	var connName = connString || 'main';
 	var getChannel;
 	if (confirmMode) {
 		getChannel = _createChannel(connString, true);
-	} else if (connString) {
-		getChannel = channelDict[connString];
-	} else {
-		getChannel = channelDict.main;
+	}
+	else if (!channelDict[connName]) {
+		getChannel = _createChannel(connString, confirmMode);
+		channelDict[connName] = getChannel;
+	}
+	else {
+		getChannel = channelDict[connName];
 	}
 
 	getChannel = getChannel
-		.then(function(c) { return _assertExchange(c, params); });
+		.then(function(c) {
+			c.on('close', function() {
+				delete channelDict[connName];
+			});
+			return _assertExchange(c, params);
+		});
 
 	var property = Object.defineProperty.bind(Object, self);
 
 	getChannel
-		.then(function(){
+		.then(function() {
 			self.emit('ready');
 		})
 		.catch(function(err){
@@ -96,7 +106,7 @@ function Exchange(connString, params){
 		}
 
 		return getChannel
-			.then(function(chan){
+			.then(function(chan) {
 
 				var options = _.extend({}, PUBLISH_DEFAULTS, publishOptions);
 				var key = (options.key || 'blank').toString();
@@ -105,7 +115,7 @@ function Exchange(connString, params){
 
 				msg._exchange = msg._exchange || exchangeName;
 
-				if (confirmMode){
+				if (confirmMode) {
 					chan.publish(exchangeName, key, Buffer(JSON.stringify(msg)), options);
 					return chan.waitForConfirms()
 						.then(function(){
@@ -131,7 +141,7 @@ function Exchange(connString, params){
 		var delay = Math.max(publishOptions.delay, 1);
 
 		return new Promise(function(resolve, reject) {
-			var queueName = 'delay_' + exchangeName  +'_by_'+publishOptions.delay+'__'+publishOptions.key;
+			var queueName = 'delay_' + exchangeName	+'_by_'+publishOptions.delay+'__'+publishOptions.key;
 
 			var tmp = new queue(connString)({
 				name: queueName,

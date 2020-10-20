@@ -61,48 +61,16 @@ describe('connection', function() {
 					queue(function(msg, ack) {
 						if (msg.message !== message) return done('got a message I shouldnt have');
 						ack();
-						connection.close().then(done);
+
+						connection.close()
+							.then(() => {
+								exchange.publish({message: message})
+								.catch((err) => {
+									done();
+								})
+							});
 					});
 				});
 		})
-	});
-
-	it('should fail to publish to the exchange with custom connection after closed', function(done) {
-		const message = ezuuid();
-		const exchangeName = ezuuid();
-
-		const connection = new Connection();
-
-		connection.connect()
-			.then(() => {
-				const exchange = new Exchange({
-						autoDelete: true,
-						name: exchangeName
-					});
-
-				exchange.on('ready', function() {
-					const queue = new Queue({
-						autoDelete: true,
-						exclusive: true,
-						exchangeNames: [exchangeName],
-						ready: function() {
-							exchange.publish({message: message});
-						}
-					});
-
-					queue(function(msg, ack) {
-						if (msg.message !== message) return done('got a message I shouldnt have');
-						ack();
-
-						connection.close().then(() => {
-              exchange.publish({message: message})
-  							.catch((err) => {
-  								console.error(err.name);
-  								done();
-  							});
-            })
-					});
-				});
-		});
 	});
 });

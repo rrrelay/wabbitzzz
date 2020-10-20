@@ -15,7 +15,6 @@ var connectionsDict = {};
 
 function _closeConnection(conn) {
 	var closed = false;
-
 	process.once('SIGINT', () => {
 		if (closed) {
 			_log('close already ran');
@@ -90,12 +89,14 @@ Connection.prototype.close = function() {
 }
 
 Connection.getConnection = function(connString = CONN_STRING) {
-	var conn = new Connection(connString);
+	var connName = connString || 'main';
 
-	console.log(conn);
+	if (!connectionsDict[connName]) {
+		connectionsDict[connName] = _createConnection(connString)
+			.then(_closeConnection);
+	}
 
-	return conn.connect()
-		.then(_closeConnection);
+	return connectionsDict[connName];
 }
 
 module.exports = Connection;
