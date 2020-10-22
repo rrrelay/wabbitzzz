@@ -2,7 +2,7 @@ var uuid = require('ezuuid');
 var _ = require('lodash');
 var defaultExchangePublish = require('./default-exchange-publish');
 var Promise = require('bluebird');
-var Connection = require('./connection');
+var getConnection = require('./get-connection');
 
 var EXCHANGE_ATTRIBUTE_NAMES = [
 	'durable',
@@ -31,7 +31,7 @@ function _log(level, ...args) {
 }
 
 function assertQueue(connString, queueName, exchangeNames, params){
-	return Connection.getConnection(connString)
+	return getConnection(connString)
 		.then(function(conn){
 			return conn.createChannel();
 		})

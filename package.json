@@ -1,10 +1,10 @@
 {
   "name": "wabbitzzz",
-  "version": "13.0.0",
+  "version": "13.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "mocha rpc.spec.js queue.spec.js exchange.spec.js connection.spec.js",
+    "test": "mocha rpc.spec.js queue.spec.js exchange.spec.js",
     "testing": "nodemon mocha queue.spec.js"
   },
   "author": "",

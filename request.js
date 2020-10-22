@@ -1,9 +1,9 @@
-var Connection = require('./connection');
+var getConnection = require('./get-connection');
 var ezuuid = require('ezuuid');
 var _ = require('lodash');
 
-function initChannel(connString) {
-	return Connection.getConnection(connString)
+function initChannel (connString) {
+	return getConnection(connString)
 		.then(function(conn) {
 			return conn.createChannel();
 		})
@@ -24,7 +24,9 @@ function initChannel(connString) {
 		});
 }
 
-const channelDict = {};
+const channelDict = {
+	main: initChannel(),
+}
 
 function handleResponse(connString, response){
 	if (!response || !response.properties || !response.properties.correlationId){
@@ -70,7 +72,7 @@ function createOptions(methodName, options){
 var requestLookup = {
 	main: {},
 };
-function request(connString) {
+function request (connString){
 	var options = createOptions.apply(null, _.toArray(arguments).slice(1));
 	var methodName = options.methodName;
 

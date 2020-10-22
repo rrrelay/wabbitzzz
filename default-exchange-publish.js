@@ -1,14 +1,16 @@
 var _ = require('lodash');
-var getConnection = require('./connection').getConnection;
+var getConnection = require('./get-connection');
 
 var PUBLISH_DEFAULTS = {
 	persistent: false,
 	contentType: 'application/json',
 };
 
-var channelDict = {};
+var channelDict = {
+	main: getChannel(),
+};
 
-function getChannel(connString) {
+function getChannel (connString) {
 	return getConnection(connString)
 		.then(function(conn){
 			return conn.createConfirmChannel();
@@ -16,12 +18,12 @@ function getChannel(connString) {
 }
 
 function _publish(connString, msg, options){
-	const connName = connString ? connString : 'main';
-	if (!channelDict[connName]) {
-		channelDict[connName] = getChannel(connString);
+	const conn = connString ? connString : 'main';
+	if (!channelDict[conn]) {
+		channelDict[conn] = getChannel(connString);
 	}
-	return channelDict[connName]
-		.then(function(chan) {
+	return channelDict[conn]
+		.then(function(chan){
 			var key = options.key;
 			var delay = options.delay;
 
@@ -39,11 +41,6 @@ function _publish(connString, msg, options){
 				};
 
 				const delayQueueName = `delay_default_${key}_${delay}`;
-
-				chan.on('close', function() {
-					delete channelDict[connName];
-				});
-
 				return chan.assertQueue(delayQueueName, queueOptions)
 					.then(() => {
 						chan.publish('', delayQueueName, Buffer(JSON.stringify(msg)), options);
