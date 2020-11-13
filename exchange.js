@@ -133,7 +133,7 @@ function Exchange(connString, params){
 		return new Promise(function(resolve, reject) {
 			var queueName = 'delay_' + exchangeName  +'_by_'+publishOptions.delay+'__'+publishOptions.key;
 
-			var tmp = new queue(connString)({
+			var tmp = new queue({ connString })({
 				name: queueName,
 				exclusive: false,
 				autoDelete: false,
