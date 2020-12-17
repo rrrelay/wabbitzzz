@@ -26,7 +26,7 @@ function initChannel (connString) {
 
 const channelDict = {
 	main: initChannel(),
-}
+};
 
 function handleResponse(connString, response){
 	if (!response || !response.properties || !response.properties.correlationId){
@@ -79,6 +79,8 @@ function request (connString){
 	return function(req = {}, cb){
 		var conn = connString ? connString : 'main';
 		var correlationId = ezuuid();
+
+		requestLookup[conn] = requestLookup[conn] || {};
 		var requestEntry = requestLookup[conn][correlationId] = {
 			cb: cb,
 		};
