@@ -309,7 +309,7 @@ function Queue(connString, params){
 								.timeout(60000)
 								.catch(err => {
 									console.error('our ack failed', err);
-									return chan.nack(msg)
+									return Promise.resolve(chan.nack(msg))
 										.timeout(60000)
 										.catch(err => {
 											console.error('our ack failed, then our nack failed', err);
