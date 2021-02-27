@@ -290,8 +290,10 @@ function Queue(connString, params){
 									return chan.ack(msg);
 								})
 								.catch(function(publishError){
-									console.error(error);
-									console.error(publishError);
+									console.error('wabbitzzz, defaultExchangePublish error', error);
+									console.error('wabbitzzz, defaultExchangePublish publishError', publishError);
+
+									throw publishError;
 								});
 						} else {
 							console.log('bad ack', error);
