@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "mocha rpc.spec.js queue.spec.js exchange.spec.js",
+    "test": "mocha --exit rpc.spec.js queue.spec.js exchange.spec.js",
     "testing": "nodemon mocha queue.spec.js"
   },
   "author": "",
@@ -17,8 +17,8 @@
   },
   "devDependencies": {
     "chai": "^1.9.1",
-    "mocha": "^1.20.1",
-    "nodemon": "^1.2.1"
+    "mocha": "^8.3.0",
+    "nodemon": "^2.0.7"
   },
   "keywords": [
     "rabbitmq",
