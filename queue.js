@@ -142,10 +142,10 @@ function Queue(connString, params){
 	var queuePromise = assertQueue(connString, name, bindings, params)
 		.then(function(chan){
 			chan.on('error', function(err){
-				console.log('error binding ' + name);
-				console.log(err.message);
-				console.error(err);
-				console.log('------------------------');
+				_log('error', '------------------------');
+				_log('error', 'error binding ' + name, err.message);
+				_log('error', err);
+				_log('error', '========================');
 			});
 
 			return Promise.resolve(true)
@@ -175,7 +175,7 @@ function Queue(connString, params){
 					return chan;
 				})
 				.catch(function(err){
-					console.error(err);
+					_log('error', 'assertQueue', err);
 					return false;
 				});
 		});
@@ -271,7 +271,7 @@ function Queue(connString, params){
 								}
 							}
 						} catch (err) {
-							console.error(err);
+							_log('error', 'error while checking attempts', err);
 						}
 
 						if (pushToRetryQueue) {
@@ -290,13 +290,13 @@ function Queue(connString, params){
 									return chan.ack(msg);
 								})
 								.catch(function(publishError){
-									console.error('wabbitzzz, defaultExchangePublish error', error);
-									console.error('wabbitzzz, defaultExchangePublish publishError', publishError);
+									_log('error', 'wabbitzzz, defaultExchangePublish error', error);
+									_log('error', 'wabbitzzz, defaultExchangePublish publishError', publishError);
 
 									throw publishError;
 								});
 						} else {
-							console.log('bad ack', error);
+							_log('error', 'bad ack', error);
 							return Promise.resolve(false);
 						}
 					};
@@ -306,13 +306,14 @@ function Queue(connString, params){
 							// generous timeouts and then restart the whole thing.
 							// TODO: try to reconnect instead of exiting
 							Promise.resolve(done.apply(null, args))
-								.timeout(60000)
+								.timeout(20000)
 								.catch(err => {
-									console.error('our ack failed', err);
+									_log('error', 'our ack failed', err);
+
 									return Promise.resolve(chan.nack(msg))
-										.timeout(60000)
+										.timeout(20000)
 										.catch(err => {
-											console.error('our ack failed, then our nack failed', err);
+											_log('our ack failed, then our nack failed', err);
 											process.exit(1);
 										});
 								});
@@ -330,8 +331,7 @@ function Queue(connString, params){
 				ctag = res.consumerTag;
 			})
 			.catch(function(err){
-				console.log('there was a problem create queue: ' + name);
-				console.error(err);
+				_log('error', 'there was a problem create queue: ' + name, err);
 			});
 	};
 
